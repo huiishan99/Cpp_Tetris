@@ -10,6 +10,7 @@ score, and a dark pixel UI.
 ## Why It Feels Good
 
 - Hold, ghost landing, and a three-piece next queue for planning ahead
+- Short lock delay so grounded pieces can still be nudged into place
 - T-spin scoring plus custom L/J/I/S/Z style-spin clears
 - Faster line-clear flash, combo feedback, level-up feedback, and best score
 - Start, pause, restart, and game-over overlays

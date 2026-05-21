@@ -79,6 +79,7 @@ Game::Game()
     started = false;
     paused = false;
     lineClearPending = false;
+    lockDelayActive = false;
     hasHeldBlock = false;
     holdUsed = false;
     lastSuccessfulActionWasRotate = false;
@@ -93,6 +94,7 @@ Game::Game()
     combo = 0;
     levelUpEventId = 0;
     lastLevelReached = 1;
+    lockDelayEventId = 0;
 }
 
 Game::Game(const Block &startingBlock, const Block &upcomingBlock)
@@ -107,6 +109,7 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock)
     started = false;
     paused = false;
     lineClearPending = false;
+    lockDelayActive = false;
     hasHeldBlock = false;
     holdUsed = false;
     lastSuccessfulActionWasRotate = false;
@@ -121,6 +124,7 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock)
     combo = 0;
     levelUpEventId = 0;
     lastLevelReached = 1;
+    lockDelayEventId = 0;
 }
 
 Game::Game(const Block &startingBlock, const Block &upcomingBlock, const Grid &initialGrid)
@@ -135,6 +139,7 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock, const Grid &i
     started = false;
     paused = false;
     lineClearPending = false;
+    lockDelayActive = false;
     hasHeldBlock = false;
     holdUsed = false;
     lastSuccessfulActionWasRotate = false;
@@ -149,6 +154,7 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock, const Grid &i
     combo = 0;
     levelUpEventId = 0;
     lastLevelReached = CalculateLevel(linesCleared);
+    lockDelayEventId = 0;
 }
 
 Game::Game(const Block &startingBlock, const Block &upcomingBlock, const Grid &initialGrid, int initialLinesCleared)
@@ -168,6 +174,7 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock, const Grid &i
     started = false;
     paused = false;
     lineClearPending = false;
+    lockDelayActive = false;
     hasHeldBlock = false;
     holdUsed = false;
     lastSuccessfulActionWasRotate = false;
@@ -182,6 +189,7 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock, const Grid &i
     combo = 0;
     levelUpEventId = 0;
     lastLevelReached = CalculateLevel(linesCleared);
+    lockDelayEventId = 0;
 }
 
 Block Game::GetRandomBlock()
@@ -394,6 +402,16 @@ bool Game::IsLineClearPending() const
     return lineClearPending;
 }
 
+bool Game::IsLockDelayActive() const
+{
+    return lockDelayActive;
+}
+
+int Game::GetLockDelayEventId() const
+{
+    return lockDelayEventId;
+}
+
 bool Game::HasHeldBlock() const
 {
     return hasHeldBlock;
@@ -575,6 +593,7 @@ void Game::MoveBlockLeft()
         else
         {
             lastSuccessfulActionWasRotate = false;
+            RefreshLockDelay();
             PlayMoveSound();
         }
     }
@@ -592,6 +611,7 @@ void Game::MoveBlockRight()
         else
         {
             lastSuccessfulActionWasRotate = false;
+            RefreshLockDelay();
             PlayMoveSound();
         }
     }
@@ -605,9 +625,10 @@ bool Game::MoveBlockDown()
         if (IsBlockOutside() || BlockFits() == false)
         {
             currentBlock.Move(-1, 0);
-            LockBlock();
+            StartLockDelay();
             return false;
         }
+        CancelLockDelay();
         return true;
     }
     return false;
@@ -617,6 +638,7 @@ void Game::DropBlock()
 {
     if (started && !gameOver && !paused && !lineClearPending)
     {
+        CancelLockDelay();
         int rowsDropped = 0;
         while (true)
         {
@@ -660,6 +682,7 @@ void Game::HoldBlock()
 
     holdUsed = true;
     lastSuccessfulActionWasRotate = false;
+    CancelLockDelay();
     if (BlockFits() == false)
     {
         gameOver = true;
@@ -700,6 +723,7 @@ void Game::RotateBlock()
         else
         {
             lastSuccessfulActionWasRotate = true;
+            RefreshLockDelay();
             PlayRotateSound();
         }
     }
@@ -771,8 +795,39 @@ bool Game::CanMoveBlock(const Block &block, int rowOffset, int columnOffset) con
     return !IsBlockOutside(movedBlock) && BlockFits(movedBlock);
 }
 
+void Game::StartLockDelay()
+{
+    if (!lockDelayActive)
+    {
+        lockDelayActive = true;
+        lockDelayEventId++;
+    }
+}
+
+void Game::RefreshLockDelay()
+{
+    if (!lockDelayActive)
+    {
+        return;
+    }
+
+    if (CanMoveBlock(currentBlock, 1, 0))
+    {
+        CancelLockDelay();
+        return;
+    }
+
+    lockDelayEventId++;
+}
+
+void Game::CancelLockDelay()
+{
+    lockDelayActive = false;
+}
+
 void Game::LockBlock()
 {
+    CancelLockDelay();
     bool tSpin = IsCurrentTSpin();
     bool styleSpin = !tSpin && IsCurrentStyleSpin();
     int spinBlockId = tSpin || styleSpin ? currentBlock.id : 0;
@@ -824,6 +879,22 @@ void Game::StartLineClear(const std::vector<int> &fullRows)
     clearEventId++;
     PlayLineClearSound();
     UpdateScore(rowsCleared, 0, lastClearSpinBlockId);
+}
+
+void Game::FinishLockDelay()
+{
+    if (!lockDelayActive || paused)
+    {
+        return;
+    }
+
+    if (CanMoveBlock(currentBlock, 1, 0))
+    {
+        CancelLockDelay();
+        return;
+    }
+
+    LockBlock();
 }
 
 void Game::FinishLineClear()
@@ -933,6 +1004,7 @@ void Game::Reset()
     started = false;
     paused = false;
     lineClearPending = false;
+    lockDelayActive = false;
     hasHeldBlock = false;
     holdUsed = false;
     lastSuccessfulActionWasRotate = false;
@@ -947,6 +1019,7 @@ void Game::Reset()
     combo = 0;
     levelUpEventId = 0;
     lastLevelReached = 1;
+    lockDelayEventId = 0;
 }
 
 void Game::UpdateScore(int linesCompleted, int moveDownPoints, int spinBlockId)

@@ -26,6 +26,25 @@ specific edits.
 
 ## Entries
 
+### 2026-05-21 - Add lock delay
+
+- Changed: Added grounded lock-delay state, event tracking for Win32 timer
+  resets, `Game::FinishLockDelay`, movement/rotation delay refreshes, and a
+  Win32 lock-delay timer before grounded pieces are committed to the grid.
+  Added core coverage for adjusting a grounded piece before it locks and for
+  keeping lock delay paused while the game is paused.
+- Why: Make grounded play feel closer to modern Tetris and give players time to
+  nudge or rotate pieces after contact.
+- Risk: Lock delay changes automatic drop timing and lock timing; hard drop
+  still locks immediately, while normal downward movement now waits for the
+  short timer.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/position.cpp src/sound.cpp -o /private/tmp/tetris_core_tests` and ran
+  `/private/tmp/tetris_core_tests`; all core tests passed.
+- Follow-ups: Add DAS/ARR next so horizontal movement feels consistent while
+  lock delay is active.
+
 ### 2026-05-17 - Add Windows packaging script
 
 - Changed: Added `package.bat` to build the game, assemble a `dist\tetris-win`

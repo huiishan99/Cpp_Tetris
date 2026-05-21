@@ -12,8 +12,10 @@ const int CELL_SIZE = 28;
 const int TIMER_ID = 1;
 const int FLASH_TIMER_ID = 2;
 const int LEVEL_TIMER_ID = 3;
+const int LOCK_TIMER_ID = 4;
 const int CLEAR_FLASH_DURATION_MS = 170;
 const int LEVEL_FLASH_DURATION_MS = 900;
+const int LOCK_DELAY_MS = 420;
 const char *HIGH_SCORE_FILE = "tetris_highscore.txt";
 const char *PIXEL_FONT_FILE = "Font\\monogram.ttf";
 const char *PIXEL_FONT_NAME = "monogram";
@@ -22,9 +24,12 @@ const char *FALLBACK_FONT_NAME = "Segoe UI";
 Game game;
 int observedClearEventId = 0;
 int observedLevelUpEventId = 0;
+int observedLockDelayEventId = 0;
 DWORD clearFlashStartedAt = 0;
 DWORD levelFlashStartedAt = 0;
+DWORD lockDelayStartedAt = 0;
 bool pixelFontLoaded = false;
+bool lockDelayTimerRunning = false;
 
 const char *GetGameFontName()
 {
@@ -525,6 +530,17 @@ bool IsLevelFlashActive()
     return elapsed < static_cast<DWORD>(LEVEL_FLASH_DURATION_MS);
 }
 
+bool IsLockDelayReadyToFinish()
+{
+    if (!game.IsLockDelayActive())
+    {
+        return false;
+    }
+
+    DWORD elapsed = GetTickCount() - lockDelayStartedAt;
+    return elapsed >= static_cast<DWORD>(LOCK_DELAY_MS);
+}
+
 void UpdateClearFlash(HWND hwnd)
 {
     int clearEventId = game.GetClearEventId();
@@ -554,11 +570,51 @@ void UpdateLevelFlash(HWND hwnd)
     }
 }
 
+void UpdateLockDelay(HWND hwnd)
+{
+    if (!game.IsLockDelayActive())
+    {
+        KillTimer(hwnd, LOCK_TIMER_ID);
+        lockDelayTimerRunning = false;
+        return;
+    }
+
+    if (game.IsPaused())
+    {
+        KillTimer(hwnd, LOCK_TIMER_ID);
+        lockDelayTimerRunning = false;
+        return;
+    }
+
+    int lockDelayEventId = game.GetLockDelayEventId();
+    if (lockDelayEventId != observedLockDelayEventId || !lockDelayTimerRunning)
+    {
+        observedLockDelayEventId = lockDelayEventId;
+        lockDelayStartedAt = GetTickCount();
+        KillTimer(hwnd, TIMER_ID);
+        SetTimer(hwnd, LOCK_TIMER_ID, 30, nullptr);
+        lockDelayTimerRunning = true;
+    }
+}
+
 void FinishClearFlash(HWND hwnd)
 {
     game.FinishLineClear();
     KillTimer(hwnd, FLASH_TIMER_ID);
     SetTimer(hwnd, TIMER_ID, game.GetDropIntervalMs(), nullptr);
+}
+
+void FinishLockDelay(HWND hwnd)
+{
+    game.FinishLockDelay();
+    KillTimer(hwnd, LOCK_TIMER_ID);
+    lockDelayTimerRunning = false;
+    UpdateClearFlash(hwnd);
+    UpdateLevelFlash(hwnd);
+    if (!game.IsLineClearPending() && !game.IsLockDelayActive() && !game.IsPaused())
+    {
+        SetTimer(hwnd, TIMER_ID, game.GetDropIntervalMs(), nullptr);
+    }
 }
 
 void DrawLineClearFlash(HDC hdc)
@@ -701,6 +757,7 @@ void HandleGameKey(HWND hwnd, WPARAM key)
     if (input != 0)
     {
         game.HandleInput(input);
+        UpdateLockDelay(hwnd);
         UpdateClearFlash(hwnd);
         UpdateLevelFlash(hwnd);
         InvalidateRect(hwnd, nullptr, FALSE);
@@ -739,10 +796,26 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             return 0;
         }
 
+        if (wParam == LOCK_TIMER_ID)
+        {
+            if (IsLockDelayReadyToFinish())
+            {
+                FinishLockDelay(hwnd);
+            }
+            else if (!game.IsLockDelayActive())
+            {
+                KillTimer(hwnd, LOCK_TIMER_ID);
+                lockDelayTimerRunning = false;
+            }
+            InvalidateRect(hwnd, nullptr, FALSE);
+            return 0;
+        }
+
         game.MoveBlockDown();
+        UpdateLockDelay(hwnd);
         UpdateClearFlash(hwnd);
         UpdateLevelFlash(hwnd);
-        if (!game.IsLineClearPending())
+        if (!game.IsLineClearPending() && !game.IsLockDelayActive())
         {
             SetTimer(hwnd, TIMER_ID, game.GetDropIntervalMs(), nullptr);
         }
@@ -772,6 +845,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         KillTimer(hwnd, TIMER_ID);
         KillTimer(hwnd, FLASH_TIMER_ID);
         KillTimer(hwnd, LEVEL_TIMER_ID);
+        KillTimer(hwnd, LOCK_TIMER_ID);
         PostQuitMessage(0);
         return 0;
     default:

@@ -16,6 +16,7 @@ public:
     void Restart();
     bool MoveBlockDown();
     void FinishLineClear();
+    void FinishLockDelay();
     const int (&GetGrid() const)[20][10];
     std::vector<Position> GetCurrentBlockCells() const;
     std::vector<Position> GetGhostBlockCells() const;
@@ -46,6 +47,8 @@ public:
     bool IsGameOver() const;
     bool IsPaused() const;
     bool IsLineClearPending() const;
+    bool IsLockDelayActive() const;
+    int GetLockDelayEventId() const;
     bool HasHeldBlock() const;
     bool CanHold() const;
     static int CalculateLineClearScore(int completedLines);
@@ -69,6 +72,9 @@ private:
     bool IsCurrentTSpin() const;
     bool IsCurrentStyleSpin() const;
     bool CanMoveBlock(const Block &block, int rowOffset, int columnOffset) const;
+    void StartLockDelay();
+    void RefreshLockDelay();
+    void CancelLockDelay();
     void LockBlock();
     void StartLineClear(const std::vector<int> &fullRows);
     void SpawnNextBlock();
@@ -91,6 +97,7 @@ private:
     bool started;
     bool paused;
     bool lineClearPending;
+    bool lockDelayActive;
     bool hasHeldBlock;
     bool holdUsed;
     bool lastSuccessfulActionWasRotate;
@@ -106,4 +113,5 @@ private:
     int combo;
     int levelUpEventId;
     int lastLevelReached;
+    int lockDelayEventId;
 };

@@ -171,6 +171,55 @@ void TestBlockedSoftDropDoesNotScore()
     Expect(game.GetHighScore() == 0, "blocked soft drop does not update high score");
 }
 
+void TestLockDelayAllowsGroundAdjustment()
+{
+    OBlock block;
+    block.Move(18, 0);
+    Game game{block, IBlock()};
+
+    game.Start();
+    int lockDelayEvent = game.GetLockDelayEventId();
+    game.MoveBlockDown();
+
+    Expect(game.IsLockDelayActive(), "blocked downward movement starts lock delay");
+    Expect(game.GetCurrentBlockId() == 4, "lock delay keeps the grounded block active");
+    Expect(game.GetGrid()[19][4] == 0, "lock delay does not write the block into the grid immediately");
+
+    game.HandleInput('a');
+
+    Expect(game.IsLockDelayActive(), "ground movement keeps lock delay active");
+    Expect(game.GetLockDelayEventId() > lockDelayEvent, "ground movement refreshes lock delay timing");
+
+    game.FinishLockDelay();
+
+    Expect(!game.IsLockDelayActive(), "finishing lock delay clears the pending lock state");
+    Expect(game.GetGrid()[19][3] == 4, "finishing lock delay writes the adjusted block position");
+    Expect(game.GetCurrentBlockId() == 3, "finishing lock delay spawns the next block");
+}
+
+void TestPauseStopsLockDelay()
+{
+    OBlock block;
+    block.Move(18, 0);
+    Game game{block, IBlock()};
+
+    game.Start();
+    game.MoveBlockDown();
+    game.HandleInput('p');
+    game.FinishLockDelay();
+
+    Expect(game.IsPaused(), "pause stays active during pending lock delay");
+    Expect(game.IsLockDelayActive(), "paused game keeps lock delay pending");
+    Expect(game.GetGrid()[19][4] == 0, "paused lock delay does not write the block into the grid");
+
+    game.HandleInput(' ');
+    game.FinishLockDelay();
+
+    Expect(!game.IsPaused(), "any key resumes before lock delay can finish");
+    Expect(!game.IsLockDelayActive(), "lock delay can finish after resume");
+    Expect(game.GetGrid()[19][4] == 4, "resumed lock delay writes the block into the grid");
+}
+
 void TestHighScoreSurvivesRestart()
 {
     Game game;
@@ -474,6 +523,8 @@ int main()
     TestStartGateBlocksMovementUntilInputStarts();
     TestSoftDropScoresOnePoint();
     TestBlockedSoftDropDoesNotScore();
+    TestLockDelayAllowsGroundAdjustment();
+    TestPauseStopsLockDelay();
     TestHighScoreSurvivesRestart();
     TestHighScoreFilePersistence();
     TestPauseStopsAutomaticDrop();
