@@ -13,9 +13,12 @@ const int TIMER_ID = 1;
 const int FLASH_TIMER_ID = 2;
 const int LEVEL_TIMER_ID = 3;
 const int LOCK_TIMER_ID = 4;
+const int INPUT_TIMER_ID = 5;
 const int CLEAR_FLASH_DURATION_MS = 170;
 const int LEVEL_FLASH_DURATION_MS = 900;
 const int LOCK_DELAY_MS = 420;
+const int DAS_DELAY_MS = 145;
+const int ARR_INTERVAL_MS = 35;
 const char *HIGH_SCORE_FILE = "tetris_highscore.txt";
 const char *PIXEL_FONT_FILE = "Font\\monogram.ttf";
 const char *PIXEL_FONT_NAME = "monogram";
@@ -30,6 +33,12 @@ DWORD levelFlashStartedAt = 0;
 DWORD lockDelayStartedAt = 0;
 bool pixelFontLoaded = false;
 bool lockDelayTimerRunning = false;
+bool inputTimerRunning = false;
+bool leftHeld = false;
+bool rightHeld = false;
+int horizontalDirection = 0;
+DWORD horizontalHeldStartedAt = 0;
+DWORD lastHorizontalRepeatAt = 0;
 
 const char *GetGameFontName()
 {
@@ -617,6 +626,164 @@ void FinishLockDelay(HWND hwnd)
     }
 }
 
+bool IsHorizontalMoveKey(WPARAM key)
+{
+    return key == VK_LEFT || key == VK_RIGHT || key == 'A' || key == 'D';
+}
+
+int GetHorizontalDirection(WPARAM key)
+{
+    if (key == VK_LEFT || key == 'A')
+    {
+        return -1;
+    }
+    if (key == VK_RIGHT || key == 'D')
+    {
+        return 1;
+    }
+    return 0;
+}
+
+int GetHorizontalInput(int direction)
+{
+    if (direction < 0)
+    {
+        return 'a';
+    }
+    if (direction > 0)
+    {
+        return 'd';
+    }
+    return 0;
+}
+
+bool CanRepeatHorizontalInput()
+{
+    return game.IsStarted() && !game.IsGameOver() && !game.IsPaused() &&
+           !game.IsLineClearPending();
+}
+
+void StartHorizontalInputTimer(HWND hwnd)
+{
+    if (!inputTimerRunning)
+    {
+        SetTimer(hwnd, INPUT_TIMER_ID, 12, nullptr);
+        inputTimerRunning = true;
+    }
+}
+
+void StopHorizontalInputTimer(HWND hwnd)
+{
+    KillTimer(hwnd, INPUT_TIMER_ID);
+    inputTimerRunning = false;
+}
+
+void ApplyGameInput(HWND hwnd, int input)
+{
+    if (input == 0)
+    {
+        return;
+    }
+
+    game.HandleInput(input);
+    UpdateLockDelay(hwnd);
+    UpdateClearFlash(hwnd);
+    UpdateLevelFlash(hwnd);
+    InvalidateRect(hwnd, nullptr, FALSE);
+}
+
+void HandleHorizontalKeyDown(HWND hwnd, WPARAM key, LPARAM)
+{
+    int direction = GetHorizontalDirection(key);
+    if (direction == 0)
+    {
+        return;
+    }
+
+    bool wasHeld = direction < 0 ? leftHeld : rightHeld;
+    if (direction < 0)
+    {
+        leftHeld = true;
+    }
+    else
+    {
+        rightHeld = true;
+    }
+
+    if (!wasHeld || horizontalDirection != direction)
+    {
+        horizontalDirection = direction;
+        horizontalHeldStartedAt = GetTickCount();
+        lastHorizontalRepeatAt = horizontalHeldStartedAt;
+        ApplyGameInput(hwnd, GetHorizontalInput(direction));
+    }
+
+    StartHorizontalInputTimer(hwnd);
+}
+
+void HandleHorizontalKeyUp(HWND hwnd, WPARAM key)
+{
+    int direction = GetHorizontalDirection(key);
+    if (direction == 0)
+    {
+        return;
+    }
+
+    if (direction < 0)
+    {
+        leftHeld = false;
+    }
+    else
+    {
+        rightHeld = false;
+    }
+
+    if (horizontalDirection == direction)
+    {
+        horizontalDirection = rightHeld ? 1 : (leftHeld ? -1 : 0);
+        horizontalHeldStartedAt = GetTickCount();
+        lastHorizontalRepeatAt = horizontalHeldStartedAt;
+
+        if (horizontalDirection == 0)
+        {
+            StopHorizontalInputTimer(hwnd);
+            return;
+        }
+
+        ApplyGameInput(hwnd, GetHorizontalInput(horizontalDirection));
+    }
+    else if (!leftHeld && !rightHeld)
+    {
+        horizontalDirection = 0;
+        StopHorizontalInputTimer(hwnd);
+    }
+}
+
+void TickHorizontalInput(HWND hwnd)
+{
+    if (horizontalDirection == 0 || (!leftHeld && !rightHeld))
+    {
+        horizontalDirection = 0;
+        StopHorizontalInputTimer(hwnd);
+        return;
+    }
+
+    if (!CanRepeatHorizontalInput())
+    {
+        return;
+    }
+
+    DWORD now = GetTickCount();
+    if (now - horizontalHeldStartedAt < static_cast<DWORD>(DAS_DELAY_MS) ||
+        now - lastHorizontalRepeatAt < static_cast<DWORD>(ARR_INTERVAL_MS))
+    {
+        return;
+    }
+
+    lastHorizontalRepeatAt = now;
+    ApplyGameInput(hwnd, GetHorizontalInput(horizontalDirection));
+}
+
 void DrawLineClearFlash(HDC hdc)
 {
     if (!IsClearFlashActive())
@@ -756,11 +923,7 @@ void HandleGameKey(HWND hwnd, WPARAM key)
 
     if (input != 0)
     {
-        game.HandleInput(input);
-        UpdateLockDelay(hwnd);
-        UpdateClearFlash(hwnd);
-        UpdateLevelFlash(hwnd);
-        InvalidateRect(hwnd, nullptr, FALSE);
+        ApplyGameInput(hwnd, input);
     }
 }
 
@@ -811,6 +974,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             return 0;
         }
 
+        if (wParam == INPUT_TIMER_ID)
+        {
+            TickHorizontalInput(hwnd);
+            return 0;
+        }
+
         game.MoveBlockDown();
         UpdateLockDelay(hwnd);
         UpdateClearFlash(hwnd);
@@ -822,7 +991,19 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
     case WM_KEYDOWN:
+        if (IsHorizontalMoveKey(wParam))
+        {
+            HandleHorizontalKeyDown(hwnd, wParam, lParam);
+            return 0;
+        }
         HandleGameKey(hwnd, wParam);
+        return 0;
+    case WM_KEYUP:
+        if (IsHorizontalMoveKey(wParam))
+        {
+            HandleHorizontalKeyUp(hwnd, wParam);
+            return 0;
+        }
         return 0;
     case WM_PAINT:
     {
@@ -846,6 +1027,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         KillTimer(hwnd, FLASH_TIMER_ID);
         KillTimer(hwnd, LEVEL_TIMER_ID);
         KillTimer(hwnd, LOCK_TIMER_ID);
+        KillTimer(hwnd, INPUT_TIMER_ID);
         PostQuitMessage(0);
         return 0;
     default:

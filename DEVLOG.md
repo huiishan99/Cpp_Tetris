@@ -26,6 +26,24 @@ specific edits.
 
 ## Entries
 
+### 2026-05-22 - Add DAS/ARR horizontal input
+
+- Changed: Added a Win32 input timer for left/right hold state, immediate
+  single-tap movement, DAS-style delayed repeat, ARR-style repeat cadence, and
+  key-up handling so the last held horizontal direction wins. Documented
+  hold-to-slide controls in the README.
+- Why: Make horizontal movement feel smoother and more controllable during
+  fast play and while using lock delay near the floor.
+- Risk: The repeat timing lives in the Windows UI layer, so portable core tests
+  cover rule regressions but not actual keyboard repeat feel. The timing may
+  still need tuning on real Windows hardware.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/position.cpp src/sound.cpp -o /private/tmp/tetris_core_tests` and ran
+  `/private/tmp/tetris_core_tests`; all core tests passed.
+- Follow-ups: Playtest on Windows and tune `DAS_DELAY_MS` or
+  `ARR_INTERVAL_MS` if held movement feels too quick or too sluggish.
+
 ### 2026-05-21 - Add lock delay
 
 - Changed: Added grounded lock-delay state, event tracking for Win32 timer

@@ -11,6 +11,7 @@ score, and a dark pixel UI.
 
 - Hold, ghost landing, and a three-piece next queue for planning ahead
 - Short lock delay so grounded pieces can still be nudged into place
+- DAS/ARR-style hold-to-move input for smoother left and right slides
 - T-spin scoring plus custom L/J/I/S/Z style-spin clears
 - Faster line-clear flash, combo feedback, level-up feedback, and best score
 - Start, pause, restart, and game-over overlays
@@ -22,7 +23,7 @@ score, and a dark pixel UI.
 | Key | Action |
 | --- | --- |
 | Any key on READY | Start |
-| Left / Right or A / D | Move |
+| Left / Right or A / D | Move, hold to slide |
 | Down or S | Soft drop |
 | Up or W | Rotate |
 | Space | Hard drop |
