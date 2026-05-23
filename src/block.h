@@ -10,6 +10,7 @@ public:
     void Move(int row, int columns);
     std::vector<Position> GetCellPositions() const;
     void Rotate();
+    void RotateCounterClockwise();
     void UndoRotation();
     int GetRotationState() const;
     int id;

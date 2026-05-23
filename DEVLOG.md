@@ -26,6 +26,27 @@ specific edits.
 
 ## Entries
 
+### 2026-05-23 - Add counter-clockwise rotation
+
+- Changed: Added counter-clockwise block rotation, wired `Z` as rotate
+  counter-clockwise, kept `Up`/`W` and added `X` for clockwise rotation,
+  expanded SRS-style kick tables for reverse rotation paths, added core tests
+  for counter-clockwise T and I kicks, updated README controls, and added a
+  compact roadmap for the next polish tracks.
+- Why: Give players the expected two-way rotation control needed for faster
+  placement, cleaner spin setup, and more modern Tetris feel.
+- Risk: `Z` now performs a gameplay action, so it no longer behaves like a
+  generic start/resume key when active play is running. Reverse kick outcomes
+  should be close to SRS, but Windows playtesting is still needed for feel.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/position.cpp src/sound.cpp -o /private/tmp/tetris_core_tests` and ran
+  `/private/tmp/tetris_core_tests`; all core tests passed. Windows GUI
+  playtesting was not available in this macOS environment.
+- Follow-ups: Build the settings interface, tune DAS/ARR on Windows, add a
+  screenshot or GIF, make a fuller installer/release flow, add a local
+  leaderboard, and expand sound effects.
+
 ### 2026-05-23 - Add SRS-style wall kicks
 
 - Changed: Replaced the generic wall-kick offsets with clockwise SRS-style

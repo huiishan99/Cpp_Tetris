@@ -115,6 +115,24 @@ void TestBlockRotationCycles()
     }
 }
 
+void TestBlockCounterClockwiseRotationCycles()
+{
+    TBlock block;
+    std::vector<Position> initialCells = block.GetCellPositions();
+
+    for (int index = 0; index < 4; index++)
+    {
+        block.RotateCounterClockwise();
+    }
+
+    std::vector<Position> finalCells = block.GetCellPositions();
+    Expect(finalCells.size() == initialCells.size(), "counter-clockwise rotation preserves cell count");
+    for (const Position &cell : initialCells)
+    {
+        Expect(HasCell(finalCells, cell.row, cell.column), "four counter-clockwise rotations return to the original cells");
+    }
+}
+
 void TestRotationKickAllowsIBlockToRotateAtTop()
 {
     Game game{IBlock(), OBlock()};
@@ -177,6 +195,47 @@ void TestSrsIBlockUsesSpecialKickTable()
     Expect(HasCell(rotatedCells, 6, 0), "SRS I kick keeps the vertical I shape");
     Expect(HasCell(rotatedCells, 7, 0), "SRS I kick avoids blocked generic offsets");
     Expect(HasCell(rotatedCells, 8, 0), "SRS I kick lands with the expected downward offset");
+}
+
+void TestCounterClockwiseSrsKickMovesTBlockUpRight()
+{
+    Grid grid;
+    grid.grid[7][5] = 7;
+    grid.grid[7][6] = 7;
+
+    TBlock block;
+    block.Move(5, 1);
+    Game game{block, OBlock(), grid};
+
+    game.Start();
+    game.HandleInput('z');
+
+    std::vector<Position> rotatedCells = game.GetCurrentBlockCells();
+    Expect(HasCell(rotatedCells, 4, 6), "counter-clockwise SRS T kick can move upward and right");
+    Expect(HasCell(rotatedCells, 5, 5), "counter-clockwise SRS T kick keeps the left foot in place");
+    Expect(HasCell(rotatedCells, 5, 6), "counter-clockwise SRS T kick preserves the rotated center");
+    Expect(HasCell(rotatedCells, 6, 6), "counter-clockwise SRS T kick lands in the first valid reverse offset");
+}
+
+void TestCounterClockwiseSrsIBlockUsesSpecialKickTable()
+{
+    Grid grid;
+    grid.grid[4][1] = 7;
+    grid.grid[4][0] = 7;
+    grid.grid[4][3] = 7;
+
+    IBlock block;
+    block.Move(5, -3);
+    Game game{block, OBlock(), grid};
+
+    game.Start();
+    game.HandleInput('z');
+
+    std::vector<Position> rotatedCells = game.GetCurrentBlockCells();
+    Expect(HasCell(rotatedCells, 5, 3), "counter-clockwise SRS I kick uses the special reverse I offset column");
+    Expect(HasCell(rotatedCells, 6, 3), "counter-clockwise SRS I kick keeps the vertical I shape");
+    Expect(HasCell(rotatedCells, 7, 3), "counter-clockwise SRS I kick avoids blocked earlier offsets");
+    Expect(HasCell(rotatedCells, 8, 3), "counter-clockwise SRS I kick lands with the expected downward reverse offset");
 }
 
 void TestStartGateBlocksMovementUntilInputStarts()
@@ -566,9 +625,12 @@ int main()
     TestGridClearsSingleRow();
     TestGridClearsMultipleRows();
     TestBlockRotationCycles();
+    TestBlockCounterClockwiseRotationCycles();
     TestRotationKickAllowsIBlockToRotateAtTop();
     TestSrsKickMovesTBlockUpLeft();
     TestSrsIBlockUsesSpecialKickTable();
+    TestCounterClockwiseSrsKickMovesTBlockUpRight();
+    TestCounterClockwiseSrsIBlockUsesSpecialKickTable();
     TestStartGateBlocksMovementUntilInputStarts();
     TestSoftDropScoresOnePoint();
     TestBlockedSoftDropDoesNotScore();

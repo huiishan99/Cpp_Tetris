@@ -912,6 +912,8 @@ void HandleGameKey(HWND hwnd, WPARAM key)
     case 'D':
     case 'S':
     case 'W':
+    case 'X':
+    case 'Z':
     case 'P':
     case 'R':
         input = static_cast<int>(key);

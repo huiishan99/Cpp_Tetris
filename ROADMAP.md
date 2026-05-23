@@ -1,0 +1,10 @@
+# Roadmap
+
+These are the next polish tracks requested during the refresh work.
+
+- Settings screen for DAS, ARR, sound, and effect speed.
+- Windows playtest pass to tune DAS/ARR values on real hardware.
+- Gameplay screenshot or GIF for the README and release page.
+- Installer or richer release package after the zip flow is stable.
+- Local leaderboard with names or profiles beyond a single best score.
+- More expressive sound effects for movement, locks, spins, and level-ups.

@@ -66,17 +66,33 @@ std::vector<Position> GetSrsKickOffsets(int blockId, int fromRotationState, int 
         {
             return {Position(0, 0), Position(0, -2), Position(0, 1), Position(1, -2), Position(-2, 1)};
         }
+        if (fromRotationState == 1 && toRotationState == 0)
+        {
+            return {Position(0, 0), Position(0, 2), Position(0, -1), Position(-1, 2), Position(2, -1)};
+        }
         if (fromRotationState == 1 && toRotationState == 2)
         {
             return {Position(0, 0), Position(0, -1), Position(0, 2), Position(-2, -1), Position(1, 2)};
+        }
+        if (fromRotationState == 2 && toRotationState == 1)
+        {
+            return {Position(0, 0), Position(0, 1), Position(0, -2), Position(2, 1), Position(-1, -2)};
         }
         if (fromRotationState == 2 && toRotationState == 3)
         {
             return {Position(0, 0), Position(0, 2), Position(0, -1), Position(-1, 2), Position(2, -1)};
         }
+        if (fromRotationState == 3 && toRotationState == 2)
+        {
+            return {Position(0, 0), Position(0, -2), Position(0, 1), Position(1, -2), Position(-2, 1)};
+        }
         if (fromRotationState == 3 && toRotationState == 0)
         {
             return {Position(0, 0), Position(0, 1), Position(0, -2), Position(2, 1), Position(-1, -2)};
+        }
+        if (fromRotationState == 0 && toRotationState == 3)
+        {
+            return {Position(0, 0), Position(0, -1), Position(0, 2), Position(-2, -1), Position(1, 2)};
         }
     }
 
@@ -84,17 +100,33 @@ std::vector<Position> GetSrsKickOffsets(int blockId, int fromRotationState, int 
     {
         return {Position(0, 0), Position(0, -1), Position(-1, -1), Position(2, 0), Position(2, -1)};
     }
+    if (fromRotationState == 1 && toRotationState == 0)
+    {
+        return {Position(0, 0), Position(0, 1), Position(1, 1), Position(-2, 0), Position(-2, 1)};
+    }
     if (fromRotationState == 1 && toRotationState == 2)
     {
         return {Position(0, 0), Position(0, 1), Position(1, 1), Position(-2, 0), Position(-2, 1)};
+    }
+    if (fromRotationState == 2 && toRotationState == 1)
+    {
+        return {Position(0, 0), Position(0, -1), Position(-1, -1), Position(2, 0), Position(2, -1)};
     }
     if (fromRotationState == 2 && toRotationState == 3)
     {
         return {Position(0, 0), Position(0, 1), Position(-1, 1), Position(2, 0), Position(2, 1)};
     }
+    if (fromRotationState == 3 && toRotationState == 2)
+    {
+        return {Position(0, 0), Position(0, -1), Position(1, -1), Position(-2, 0), Position(-2, -1)};
+    }
     if (fromRotationState == 3 && toRotationState == 0)
     {
         return {Position(0, 0), Position(0, -1), Position(1, -1), Position(-2, 0), Position(-2, -1)};
+    }
+    if (fromRotationState == 0 && toRotationState == 3)
+    {
+        return {Position(0, 0), Position(0, 1), Position(-1, 1), Position(2, 0), Position(2, 1)};
     }
 
     return {Position(0, 0)};
@@ -593,7 +625,13 @@ void Game::HandleInput(int key)
         break;
     case 'w':
     case 'W':
+    case 'x':
+    case 'X':
         RotateBlock();
+        break;
+    case 'z':
+    case 'Z':
+        RotateBlockCounterClockwise();
         break;
     case ' ':
         DropBlock();
@@ -756,6 +794,26 @@ void Game::RotateBlock()
         if (!TryWallKick(fromRotationState, toRotationState))
         {
             currentBlock.UndoRotation();
+        }
+        else
+        {
+            lastSuccessfulActionWasRotate = true;
+            RefreshLockDelay();
+            PlayRotateSound();
+        }
+    }
+}
+
+void Game::RotateBlockCounterClockwise()
+{
+    if (started && !gameOver && !paused && !lineClearPending)
+    {
+        int fromRotationState = currentBlock.GetRotationState();
+        currentBlock.RotateCounterClockwise();
+        int toRotationState = currentBlock.GetRotationState();
+        if (!TryWallKick(fromRotationState, toRotationState))
+        {
+            currentBlock.Rotate();
         }
         else
         {

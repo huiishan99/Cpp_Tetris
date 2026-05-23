@@ -35,13 +35,18 @@ void Block::Rotate()
     }
 }
 
-void Block::UndoRotation()
+void Block::RotateCounterClockwise()
 {
     rotationState--;
     if (rotationState == -1)
     {
         rotationState = cells.size() - 1;
     }
+}
+
+void Block::UndoRotation()
+{
+    RotateCounterClockwise();
 }
 
 int Block::GetRotationState() const

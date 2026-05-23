@@ -12,7 +12,7 @@ score, and a dark pixel UI.
 - Hold, ghost landing, and a three-piece next queue for planning ahead
 - Short lock delay so grounded pieces can still be nudged into place
 - DAS/ARR-style hold-to-move input for smoother left and right slides
-- SRS-style wall kicks for cleaner rotations near walls, stacks, and spin slots
+- Clockwise and counter-clockwise SRS-style wall kicks for cleaner rotations
 - T-spin scoring plus custom L/J/I/S/Z style-spin clears
 - Faster line-clear flash, combo feedback, level-up feedback, and best score
 - Start, pause, restart, and game-over overlays
@@ -26,7 +26,8 @@ score, and a dark pixel UI.
 | Any key on READY | Start |
 | Left / Right or A / D | Move, hold to slide |
 | Down or S | Soft drop |
-| Up or W | Rotate |
+| Up / W / X | Rotate clockwise |
+| Z | Rotate counter-clockwise |
 | Space | Hard drop |
 | C or Shift | Hold |
 | P or Esc | Pause |
