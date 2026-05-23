@@ -26,6 +26,27 @@ specific edits.
 
 ## Entries
 
+### 2026-05-23 - Add in-game settings overlay
+
+- Changed: Added an F1 settings overlay with selectable rows for DAS delay,
+  ARR interval, line-clear effect duration, and sound on/off. Converted those
+  Win32 timing values from fixed constants into adjustable runtime state,
+  paused automatic timers while settings are open, added a sound enable flag,
+  documented controls, updated the roadmap, and added a sound toggle core
+  test.
+- Why: Let the game be tuned without rebuilding, especially for Windows
+  playtesting where keyboard feel and clear effect speed are easiest to judge.
+- Risk: Settings are runtime-only for now and are not persisted between
+  launches. The overlay and key handling touch Win32-only UI code, so real
+  keyboard testing on Windows is still needed.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/position.cpp src/sound.cpp -o /private/tmp/tetris_core_tests` and ran
+  `/private/tmp/tetris_core_tests`; all core tests passed. Windows GUI
+  playtesting was not available in this macOS environment.
+- Follow-ups: Persist settings to a config file and tune the default DAS/ARR
+  values after Windows playtesting.
+
 ### 2026-05-23 - Add counter-clockwise rotation
 
 - Changed: Added counter-clockwise block rotation, wired `Z` as rotate

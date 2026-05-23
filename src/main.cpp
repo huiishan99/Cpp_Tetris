@@ -1,5 +1,6 @@
 #include "game.h"
 #include "high_score.h"
+#include "sound.h"
 #include <windows.h>
 #include <string>
 #include <vector>
@@ -14,15 +15,30 @@ const int FLASH_TIMER_ID = 2;
 const int LEVEL_TIMER_ID = 3;
 const int LOCK_TIMER_ID = 4;
 const int INPUT_TIMER_ID = 5;
-const int CLEAR_FLASH_DURATION_MS = 170;
+const int DEFAULT_CLEAR_FLASH_DURATION_MS = 170;
 const int LEVEL_FLASH_DURATION_MS = 900;
 const int LOCK_DELAY_MS = 420;
-const int DAS_DELAY_MS = 145;
-const int ARR_INTERVAL_MS = 35;
+const int DEFAULT_DAS_DELAY_MS = 145;
+const int DEFAULT_ARR_INTERVAL_MS = 35;
+const int MIN_DAS_DELAY_MS = 80;
+const int MAX_DAS_DELAY_MS = 250;
+const int MIN_ARR_INTERVAL_MS = 15;
+const int MAX_ARR_INTERVAL_MS = 80;
+const int MIN_CLEAR_FLASH_DURATION_MS = 90;
+const int MAX_CLEAR_FLASH_DURATION_MS = 240;
 const char *HIGH_SCORE_FILE = "tetris_highscore.txt";
 const char *PIXEL_FONT_FILE = "Font\\monogram.ttf";
 const char *PIXEL_FONT_NAME = "monogram";
 const char *FALLBACK_FONT_NAME = "Segoe UI";
+
+enum SettingsOption
+{
+    SettingsDasDelay = 0,
+    SettingsArrInterval,
+    SettingsClearFlash,
+    SettingsSound,
+    SettingsOptionCount
+};
 
 Game game;
 int observedClearEventId = 0;
@@ -31,9 +47,14 @@ int observedLockDelayEventId = 0;
 DWORD clearFlashStartedAt = 0;
 DWORD levelFlashStartedAt = 0;
 DWORD lockDelayStartedAt = 0;
+int clearFlashDurationMs = DEFAULT_CLEAR_FLASH_DURATION_MS;
+int dasDelayMs = DEFAULT_DAS_DELAY_MS;
+int arrIntervalMs = DEFAULT_ARR_INTERVAL_MS;
+int selectedSettingIndex = 0;
 bool pixelFontLoaded = false;
 bool lockDelayTimerRunning = false;
 bool inputTimerRunning = false;
+bool settingsOpen = false;
 bool leftHeld = false;
 bool rightHeld = false;
 int horizontalDirection = 0;
@@ -118,6 +139,19 @@ COLORREF AdjustColor(COLORREF color, int amount)
         blue = 255;
     }
     return RGB(red, green, blue);
+}
+
+int ClampInt(int value, int minimum, int maximum)
+{
+    if (value < minimum)
+    {
+        return minimum;
+    }
+    if (value > maximum)
+    {
+        return maximum;
+    }
+    return value;
 }
 
 void DrawTextLine(HDC hdc, int x, int y, const std::string &text, int size = 24,
@@ -418,6 +452,11 @@ void DrawStatusPanel(HDC hdc, int x, int y, int width)
         status = "GAME OVER";
         statusColor = RGB(240, 101, 95);
     }
+    else if (settingsOpen)
+    {
+        status = "SETTINGS";
+        statusColor = RGB(123, 205, 236);
+    }
     else if (!game.IsStarted())
     {
         status = "READY";
@@ -439,14 +478,15 @@ void DrawStatusPanel(HDC hdc, int x, int y, int width)
     DrawTextLine(hdc, x + 14, y + 10, "Status", 16, RGB(170, 178, 158), FW_NORMAL);
     if (observedLevelUpEventId > 0 &&
         GetTickCount() - levelFlashStartedAt < static_cast<DWORD>(LEVEL_FLASH_DURATION_MS) &&
-        game.IsStarted() && !game.IsGameOver() && !game.IsPaused())
+        game.IsStarted() && !game.IsGameOver() && !game.IsPaused() && !settingsOpen)
     {
         DrawTextLine(hdc, x + 14, y + 30, "LEVEL UP", 22, RGB(122, 214, 176), FW_BOLD);
         DrawTextLine(hdc, x + 14, y + 56,
                      "Level " + std::to_string(game.GetLastLevelReached()),
                      16, RGB(170, 178, 158), FW_NORMAL);
     }
-    else if (game.GetLastClearLines() > 0 && game.IsStarted() && !game.IsGameOver() && !game.IsPaused())
+    else if (game.GetLastClearLines() > 0 && game.IsStarted() && !game.IsGameOver() &&
+             !game.IsPaused() && !settingsOpen)
     {
         std::string clearText = game.WasLastClearSpin()
                                     ? GetSpinLabel(game.GetLastClearSpinBlockId())
@@ -506,6 +546,122 @@ void DrawStateOverlay(HDC hdc)
     }
 }
 
+std::string GetSettingLabel(int index)
+{
+    switch (index)
+    {
+    case SettingsDasDelay:
+        return "DAS";
+    case SettingsArrInterval:
+        return "ARR";
+    case SettingsClearFlash:
+        return "CLEAR FX";
+    case SettingsSound:
+        return "SOUND";
+    default:
+        return "";
+    }
+}
+
+std::string GetSettingValue(int index)
+{
+    switch (index)
+    {
+    case SettingsDasDelay:
+        return std::to_string(dasDelayMs) + " ms";
+    case SettingsArrInterval:
+        return std::to_string(arrIntervalMs) + " ms";
+    case SettingsClearFlash:
+        return std::to_string(clearFlashDurationMs) + " ms";
+    case SettingsSound:
+        return IsSoundEnabled() ? "ON" : "OFF";
+    default:
+        return "";
+    }
+}
+
+void DrawSettingMeter(HDC hdc, int left, int top, int width, int value, int minimum, int maximum,
+                      COLORREF fillColor)
+{
+    FillRoundRectColor(hdc, left, top, left + width, top + 8, 5,
+                       RGB(17, 20, 20), RGB(55, 62, 55));
+    int fillWidth = (value - minimum) * width / (maximum - minimum);
+    if (fillWidth < 8)
+    {
+        fillWidth = 8;
+    }
+    FillRoundRectColor(hdc, left, top, left + fillWidth, top + 8, 5,
+                       fillColor, AdjustColor(fillColor, -50));
+}
+
+void DrawSettingsRow(HDC hdc, int index, int top)
+{
+    const int left = BOARD_LEFT + 58;
+    const int right = WINDOW_WIDTH - 58;
+    bool selected = selectedSettingIndex == index;
+    COLORREF accent = selected ? RGB(123, 205, 236) : RGB(86, 98, 88);
+    COLORREF fill = selected ? RGB(39, 48, 49) : RGB(29, 34, 34);
+    COLORREF labelColor = selected ? RGB(248, 244, 225) : RGB(178, 187, 168);
+    COLORREF valueColor = selected ? RGB(123, 205, 236) : RGB(248, 244, 225);
+
+    FillRoundRectColor(hdc, left, top, right, top + 48, 8, fill, accent);
+    DrawTextLine(hdc, left + 18, top + 12, GetSettingLabel(index), 20, labelColor, FW_BOLD);
+    DrawTextLine(hdc, right - 122, top + 12, GetSettingValue(index), 20, valueColor, FW_BOLD);
+
+    if (index == SettingsDasDelay)
+    {
+        DrawSettingMeter(hdc, left + 160, top + 31, 160, dasDelayMs,
+                         MIN_DAS_DELAY_MS, MAX_DAS_DELAY_MS, accent);
+    }
+    else if (index == SettingsArrInterval)
+    {
+        DrawSettingMeter(hdc, left + 160, top + 31, 160, arrIntervalMs,
+                         MIN_ARR_INTERVAL_MS, MAX_ARR_INTERVAL_MS, accent);
+    }
+    else if (index == SettingsClearFlash)
+    {
+        DrawSettingMeter(hdc, left + 160, top + 31, 160, clearFlashDurationMs,
+                         MIN_CLEAR_FLASH_DURATION_MS, MAX_CLEAR_FLASH_DURATION_MS, accent);
+    }
+    else
+    {
+        int switchLeft = left + 160;
+        COLORREF switchColor = IsSoundEnabled() ? RGB(122, 214, 176) : RGB(119, 124, 116);
+        FillRoundRectColor(hdc, switchLeft, top + 20, switchLeft + 82, top + 34, 8,
+                           switchColor, AdjustColor(switchColor, -55));
+        int knobLeft = IsSoundEnabled() ? switchLeft + 56 : switchLeft + 6;
+        FillRoundRectColor(hdc, knobLeft, top + 18, knobLeft + 22, top + 36, 9,
+                           RGB(248, 244, 225), RGB(210, 204, 184));
+    }
+}
+
+void DrawSettingsOverlay(HDC hdc)
+{
+    if (!settingsOpen)
+    {
+        return;
+    }
+
+    const int left = BOARD_LEFT + 34;
+    const int right = WINDOW_WIDTH - 34;
+    const int top = BOARD_TOP + 104;
+    const int bottom = BOARD_TOP + 428;
+
+    FillRoundRectColor(hdc, left + 6, top + 8, right + 6, bottom + 8, 12,
+                       RGB(9, 11, 11), RGB(9, 11, 11));
+    FillRoundRectColor(hdc, left, top, right, bottom, 12,
+                       RGB(25, 31, 32), RGB(65, 129, 146));
+    FillRectColor(hdc, left + 22, top + 18, right - 22, top + 22, RGB(123, 205, 236));
+
+    DrawTextCentered(hdc, left, right, top + 42, "SETTINGS", 34,
+                     RGB(248, 244, 225), FW_BOLD);
+
+    for (int index = 0; index < SettingsOptionCount; index++)
+    {
+        DrawSettingsRow(hdc, index, top + 92 + index * 56);
+    }
+}
+
 bool IsClearFlashActive()
 {
     if (!game.IsLineClearPending() || observedClearEventId == 0 || game.GetLastClearedRows().empty())
@@ -514,18 +670,23 @@ bool IsClearFlashActive()
     }
 
     DWORD elapsed = GetTickCount() - clearFlashStartedAt;
-    return elapsed < static_cast<DWORD>(CLEAR_FLASH_DURATION_MS);
+    return elapsed < static_cast<DWORD>(clearFlashDurationMs);
 }
 
 bool IsClearFlashReadyToFinish()
 {
+    if (settingsOpen)
+    {
+        return false;
+    }
+
     if (!game.IsLineClearPending() || observedClearEventId == 0)
     {
         return false;
     }
 
     DWORD elapsed = GetTickCount() - clearFlashStartedAt;
-    return elapsed >= static_cast<DWORD>(CLEAR_FLASH_DURATION_MS);
+    return elapsed >= static_cast<DWORD>(clearFlashDurationMs);
 }
 
 bool IsLevelFlashActive()
@@ -541,6 +702,11 @@ bool IsLevelFlashActive()
 
 bool IsLockDelayReadyToFinish()
 {
+    if (settingsOpen)
+    {
+        return false;
+    }
+
     if (!game.IsLockDelayActive())
     {
         return false;
@@ -588,7 +754,7 @@ void UpdateLockDelay(HWND hwnd)
         return;
     }
 
-    if (game.IsPaused())
+    if (game.IsPaused() || settingsOpen)
     {
         KillTimer(hwnd, LOCK_TIMER_ID);
         lockDelayTimerRunning = false;
@@ -620,7 +786,7 @@ void FinishLockDelay(HWND hwnd)
     lockDelayTimerRunning = false;
     UpdateClearFlash(hwnd);
     UpdateLevelFlash(hwnd);
-    if (!game.IsLineClearPending() && !game.IsLockDelayActive() && !game.IsPaused())
+    if (!game.IsLineClearPending() && !game.IsLockDelayActive() && !game.IsPaused() && !settingsOpen)
     {
         SetTimer(hwnd, TIMER_ID, game.GetDropIntervalMs(), nullptr);
     }
@@ -659,7 +825,7 @@ int GetHorizontalInput(int direction)
 
 bool CanRepeatHorizontalInput()
 {
-    return game.IsStarted() && !game.IsGameOver() && !game.IsPaused() &&
+    return game.IsStarted() && !game.IsGameOver() && !game.IsPaused() && !settingsOpen &&
            !game.IsLineClearPending();
 }
 
@@ -676,6 +842,91 @@ void StopHorizontalInputTimer(HWND hwnd)
 {
     KillTimer(hwnd, INPUT_TIMER_ID);
     inputTimerRunning = false;
+}
+
+void ResetHorizontalInput(HWND hwnd)
+{
+    leftHeld = false;
+    rightHeld = false;
+    horizontalDirection = 0;
+    StopHorizontalInputTimer(hwnd);
+}
+
+void ToggleSettings(HWND hwnd)
+{
+    settingsOpen = !settingsOpen;
+    ResetHorizontalInput(hwnd);
+
+    if (settingsOpen)
+    {
+        KillTimer(hwnd, TIMER_ID);
+        KillTimer(hwnd, LOCK_TIMER_ID);
+        lockDelayTimerRunning = false;
+    }
+    else
+    {
+        UpdateLockDelay(hwnd);
+        if (!game.IsLineClearPending() && !game.IsLockDelayActive() && !game.IsPaused())
+        {
+            SetTimer(hwnd, TIMER_ID, game.GetDropIntervalMs(), nullptr);
+        }
+    }
+
+    InvalidateRect(hwnd, nullptr, FALSE);
+}
+
+void AdjustSelectedSetting(int direction)
+{
+    if (selectedSettingIndex == SettingsDasDelay)
+    {
+        dasDelayMs = ClampInt(dasDelayMs + direction * 10, MIN_DAS_DELAY_MS, MAX_DAS_DELAY_MS);
+    }
+    else if (selectedSettingIndex == SettingsArrInterval)
+    {
+        arrIntervalMs = ClampInt(arrIntervalMs + direction * 5, MIN_ARR_INTERVAL_MS, MAX_ARR_INTERVAL_MS);
+    }
+    else if (selectedSettingIndex == SettingsClearFlash)
+    {
+        clearFlashDurationMs = ClampInt(clearFlashDurationMs + direction * 10,
+                                        MIN_CLEAR_FLASH_DURATION_MS, MAX_CLEAR_FLASH_DURATION_MS);
+    }
+    else if (selectedSettingIndex == SettingsSound)
+    {
+        SetSoundEnabled(!IsSoundEnabled());
+    }
+}
+
+void HandleSettingsKey(HWND hwnd, WPARAM key)
+{
+    switch (key)
+    {
+    case VK_ESCAPE:
+        ToggleSettings(hwnd);
+        return;
+    case VK_UP:
+        selectedSettingIndex = (selectedSettingIndex + SettingsOptionCount - 1) % SettingsOptionCount;
+        break;
+    case VK_DOWN:
+        selectedSettingIndex = (selectedSettingIndex + 1) % SettingsOptionCount;
+        break;
+    case VK_LEFT:
+        AdjustSelectedSetting(-1);
+        break;
+    case VK_RIGHT:
+        AdjustSelectedSetting(1);
+        break;
+    case VK_RETURN:
+    case VK_SPACE:
+        if (selectedSettingIndex == SettingsSound)
+        {
+            AdjustSelectedSetting(1);
+        }
+        break;
+    default:
+        break;
+    }
+
+    InvalidateRect(hwnd, nullptr, FALSE);
 }
 
 void ApplyGameInput(HWND hwnd, int input)
@@ -774,8 +1025,8 @@ void TickHorizontalInput(HWND hwnd)
     }
 
     DWORD now = GetTickCount();
-    if (now - horizontalHeldStartedAt < static_cast<DWORD>(DAS_DELAY_MS) ||
-        now - lastHorizontalRepeatAt < static_cast<DWORD>(ARR_INTERVAL_MS))
+    if (now - horizontalHeldStartedAt < static_cast<DWORD>(dasDelayMs) ||
+        now - lastHorizontalRepeatAt < static_cast<DWORD>(arrIntervalMs))
     {
         return;
     }
@@ -873,6 +1124,7 @@ void DrawGame(HDC hdc)
                           "Next", game.GetUpcomingBlockCells(), game.GetUpcomingBlockIds());
     DrawStatusPanel(hdc, panelX, BOARD_TOP + 486, panelWidth);
     DrawStateOverlay(hdc);
+    DrawSettingsOverlay(hdc);
 }
 
 void HandleGameKey(HWND hwnd, WPARAM key)
@@ -982,6 +1234,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             return 0;
         }
 
+        if (settingsOpen)
+        {
+            InvalidateRect(hwnd, nullptr, FALSE);
+            return 0;
+        }
+
         game.MoveBlockDown();
         UpdateLockDelay(hwnd);
         UpdateClearFlash(hwnd);
@@ -993,6 +1251,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
     case WM_KEYDOWN:
+        if (wParam == VK_F1)
+        {
+            ToggleSettings(hwnd);
+            return 0;
+        }
+        if (settingsOpen)
+        {
+            HandleSettingsKey(hwnd, wParam);
+            return 0;
+        }
         if (IsHorizontalMoveKey(wParam))
         {
             HandleHorizontalKeyDown(hwnd, wParam, lParam);
@@ -1001,6 +1269,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         HandleGameKey(hwnd, wParam);
         return 0;
     case WM_KEYUP:
+        if (settingsOpen)
+        {
+            return 0;
+        }
         if (IsHorizontalMoveKey(wParam))
         {
             HandleHorizontalKeyUp(hwnd, wParam);

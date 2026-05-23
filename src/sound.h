@@ -9,3 +9,5 @@ void PlayLineClearSound();
 void PlayLevelUpSound();
 void PlayPauseSound();
 void PlayGameOverSound();
+void SetSoundEnabled(bool enabled);
+bool IsSoundEnabled();

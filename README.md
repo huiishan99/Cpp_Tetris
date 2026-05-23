@@ -16,6 +16,7 @@ score, and a dark pixel UI.
 - T-spin scoring plus custom L/J/I/S/Z style-spin clears
 - Faster line-clear flash, combo feedback, level-up feedback, and best score
 - Start, pause, restart, and game-over overlays
+- In-game tuning for DAS, ARR, clear effect speed, and sound
 - Pixel-style font with compact Win32 rendering
 - Lightweight sound cues for moves, drops, hold, rotate, clears, pause, and game over
 
@@ -31,9 +32,13 @@ score, and a dark pixel UI.
 | Space | Hard drop |
 | C or Shift | Hold |
 | P or Esc | Pause |
+| F1 | Settings |
 | Any key while paused | Resume |
 | R | Restart |
 | Q | Quit |
+
+Inside settings, use Up / Down to choose a row, Left / Right to adjust it, and
+Esc or F1 to close the panel.
 
 ## Scoring
 

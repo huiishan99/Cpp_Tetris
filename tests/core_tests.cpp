@@ -2,6 +2,7 @@
 #include "game.h"
 #include "grid.h"
 #include "high_score.h"
+#include "sound.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -360,6 +361,14 @@ void TestHighScoreFilePersistence()
     std::remove(path);
 }
 
+void TestSoundToggleState()
+{
+    SetSoundEnabled(false);
+    Expect(!IsSoundEnabled(), "sound can be disabled");
+    SetSoundEnabled(true);
+    Expect(IsSoundEnabled(), "sound can be re-enabled");
+}
+
 void TestPauseStopsAutomaticDrop()
 {
     Game game;
@@ -638,6 +647,7 @@ int main()
     TestPauseStopsLockDelay();
     TestHighScoreSurvivesRestart();
     TestHighScoreFilePersistence();
+    TestSoundToggleState();
     TestPauseStopsAutomaticDrop();
     TestRestartInputResetsRunningGame();
     TestGhostBlockPreviewIsBelowCurrentBlock();

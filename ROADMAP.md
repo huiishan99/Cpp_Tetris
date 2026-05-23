@@ -2,7 +2,13 @@
 
 These are the next polish tracks requested during the refresh work.
 
-- Settings screen for DAS, ARR, sound, and effect speed.
+## Done
+
+- Initial settings overlay for DAS, ARR, sound, and clear effect speed.
+
+## Next
+
+- Persist settings between launches.
 - Windows playtest pass to tune DAS/ARR values on real hardware.
 - Gameplay screenshot or GIF for the README and release page.
 - Installer or richer release package after the zip flow is stable.

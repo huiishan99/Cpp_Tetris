@@ -4,8 +4,27 @@
 #include <windows.h>
 #endif
 
+namespace
+{
+bool soundEnabled = true;
+}
+
+void SetSoundEnabled(bool enabled)
+{
+    soundEnabled = enabled;
+}
+
+bool IsSoundEnabled()
+{
+    return soundEnabled;
+}
+
 void PlayMoveSound()
 {
+    if (!soundEnabled)
+    {
+        return;
+    }
 #ifdef _WIN32
     Beep(440, 12);
 #endif
@@ -13,6 +32,10 @@ void PlayMoveSound()
 
 void PlaySoftDropSound()
 {
+    if (!soundEnabled)
+    {
+        return;
+    }
 #ifdef _WIN32
     Beep(330, 10);
 #endif
@@ -20,6 +43,10 @@ void PlaySoftDropSound()
 
 void PlayHardDropSound()
 {
+    if (!soundEnabled)
+    {
+        return;
+    }
 #ifdef _WIN32
     Beep(220, 35);
 #endif
@@ -27,6 +54,10 @@ void PlayHardDropSound()
 
 void PlayHoldSound()
 {
+    if (!soundEnabled)
+    {
+        return;
+    }
 #ifdef _WIN32
     Beep(520, 25);
 #endif
@@ -34,6 +65,10 @@ void PlayHoldSound()
 
 void PlayRotateSound()
 {
+    if (!soundEnabled)
+    {
+        return;
+    }
 #ifdef _WIN32
     Beep(880, 25);
 #endif
@@ -41,6 +76,10 @@ void PlayRotateSound()
 
 void PlayLineClearSound()
 {
+    if (!soundEnabled)
+    {
+        return;
+    }
 #ifdef _WIN32
     Beep(660, 60);
 #endif
@@ -48,6 +87,10 @@ void PlayLineClearSound()
 
 void PlayLevelUpSound()
 {
+    if (!soundEnabled)
+    {
+        return;
+    }
 #ifdef _WIN32
     Beep(740, 45);
     Beep(980, 65);
@@ -56,6 +99,10 @@ void PlayLevelUpSound()
 
 void PlayPauseSound()
 {
+    if (!soundEnabled)
+    {
+        return;
+    }
 #ifdef _WIN32
     Beep(500, 30);
 #endif
@@ -63,6 +110,10 @@ void PlayPauseSound()
 
 void PlayGameOverSound()
 {
+    if (!soundEnabled)
+    {
+        return;
+    }
 #ifdef _WIN32
     Beep(220, 70);
     Beep(165, 110);
