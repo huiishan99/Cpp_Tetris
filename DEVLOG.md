@@ -26,6 +26,28 @@ specific edits.
 
 ## Entries
 
+### 2026-05-23 - Add local leaderboard
+
+- Changed: Added a portable leaderboard module for top-five score sorting,
+  file persistence, and best-score lookup. The Win32 game now loads
+  `tetris_leaderboard.txt`, migrates an existing single high score into the
+  leaderboard, records a positive score once when game over happens, saves the
+  leaderboard, and shows the top three entries on the game-over overlay.
+  Updated CMake, README, roadmap, git ignores, and core tests.
+- Why: Move beyond a single best score and give repeat play a clearer local
+  progression target.
+- Risk: Entries use the default `PLAYER` name until a later name-entry flow is
+  added. The game-over overlay changed layout and still needs Windows visual
+  playtesting.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp src/sound.cpp -o
+  /private/tmp/tetris_core_tests` and ran `/private/tmp/tetris_core_tests`;
+  all core tests passed. Windows GUI playtesting was not available in this
+  macOS environment.
+- Follow-ups: Add editable player names and confirm the game-over overlay on
+  Windows.
+
 ### 2026-05-23 - Persist settings
 
 - Changed: Added a portable settings module that reads and writes

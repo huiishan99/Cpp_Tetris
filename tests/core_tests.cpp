@@ -2,6 +2,7 @@
 #include "game.h"
 #include "grid.h"
 #include "high_score.h"
+#include "leaderboard.h"
 #include "settings.h"
 #include "sound.h"
 
@@ -413,6 +414,61 @@ void TestSettingsSanitizeInvalidValues()
     Expect(sanitized.clearFlashDurationMs == SettingsMinClearFlashDurationMs, "clear flash setting clamps to minimum");
 }
 
+void TestLeaderboardSortsAndLimitsEntries()
+{
+    std::vector<LeaderboardEntry> entries = {
+        {"LOW", 100},
+        {"HIGH", 900},
+        {"MID", 500},
+        {"NEG", -1},
+        {"FOUR", 400},
+        {"FIVE", 300},
+        {"SIX", 200},
+    };
+
+    std::vector<LeaderboardEntry> ranked = NormalizeLeaderboard(entries);
+    Expect(ranked.size() == LeaderboardMaxEntries, "leaderboard keeps the configured number of entries");
+    Expect(ranked[0].score == 900, "leaderboard sorts highest score first");
+    Expect(ranked[1].score == 500, "leaderboard keeps descending order");
+    Expect(ranked[4].score == 200, "leaderboard trims lower scores after sorting");
+}
+
+void TestLeaderboardAddsScoreAndBestScore()
+{
+    std::vector<LeaderboardEntry> entries = {
+        {"AAA", 100},
+        {"BBB", 200},
+    };
+
+    std::vector<LeaderboardEntry> ranked = AddLeaderboardScore(entries, 350, "NEW");
+    Expect(ranked[0].name == "NEW", "added leaderboard score stores the player name");
+    Expect(ranked[0].score == 350, "added leaderboard score becomes first when highest");
+    Expect(GetBestLeaderboardScore(ranked) == 350, "best leaderboard score reports the top score");
+}
+
+void TestLeaderboardFilePersistence()
+{
+    const char *path = "tetris_leaderboard_test.tmp";
+    std::remove(path);
+
+    std::vector<LeaderboardEntry> missing = LoadLeaderboard(path);
+    Expect(missing.empty(), "missing leaderboard file loads as empty");
+
+    std::vector<LeaderboardEntry> entries = {
+        {"AAA", 120},
+        {"BBB", 300},
+        {"CCC", 220},
+    };
+    Expect(SaveLeaderboard(path, entries), "leaderboard file saves successfully");
+
+    std::vector<LeaderboardEntry> loaded = LoadLeaderboard(path);
+    Expect(loaded.size() == 3, "saved leaderboard entry count loads successfully");
+    Expect(loaded[0].name == "BBB" && loaded[0].score == 300, "loaded leaderboard is sorted");
+    Expect(loaded[2].name == "AAA" && loaded[2].score == 120, "loaded leaderboard keeps lower entries");
+
+    std::remove(path);
+}
+
 void TestPauseStopsAutomaticDrop()
 {
     Game game;
@@ -694,6 +750,9 @@ int main()
     TestSoundToggleState();
     TestSettingsDefaultsAndPersistence();
     TestSettingsSanitizeInvalidValues();
+    TestLeaderboardSortsAndLimitsEntries();
+    TestLeaderboardAddsScoreAndBestScore();
+    TestLeaderboardFilePersistence();
     TestPauseStopsAutomaticDrop();
     TestRestartInputResetsRunningGame();
     TestGhostBlockPreviewIsBelowCurrentBlock();

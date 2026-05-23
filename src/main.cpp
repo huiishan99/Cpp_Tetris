@@ -1,5 +1,6 @@
 #include "game.h"
 #include "high_score.h"
+#include "leaderboard.h"
 #include "settings.h"
 #include "sound.h"
 #include <windows.h>
@@ -19,6 +20,7 @@ const int INPUT_TIMER_ID = 5;
 const int LEVEL_FLASH_DURATION_MS = 900;
 const int LOCK_DELAY_MS = 420;
 const char *HIGH_SCORE_FILE = "tetris_highscore.txt";
+const char *LEADERBOARD_FILE = "tetris_leaderboard.txt";
 const char *SETTINGS_FILE = "tetris_settings.txt";
 const char *PIXEL_FONT_FILE = "Font\\monogram.ttf";
 const char *PIXEL_FONT_NAME = "monogram";
@@ -34,6 +36,7 @@ enum SettingsOption
 };
 
 Game game;
+std::vector<LeaderboardEntry> leaderboard;
 int observedClearEventId = 0;
 int observedLevelUpEventId = 0;
 int observedLockDelayEventId = 0;
@@ -48,6 +51,7 @@ bool pixelFontLoaded = false;
 bool lockDelayTimerRunning = false;
 bool inputTimerRunning = false;
 bool settingsOpen = false;
+bool gameOverScoreRecorded = false;
 bool leftHeld = false;
 bool rightHeld = false;
 int horizontalDirection = 0;
@@ -164,6 +168,30 @@ GameSettings CollectRuntimeSettings()
         clearFlashDurationMs,
         IsSoundEnabled(),
     });
+}
+
+void RecordGameOverScoreIfNeeded()
+{
+    if (!game.IsGameOver())
+    {
+        gameOverScoreRecorded = false;
+        return;
+    }
+
+    if (gameOverScoreRecorded || game.GetScore() <= 0)
+    {
+        return;
+    }
+
+    leaderboard = AddLeaderboardScore(leaderboard, game.GetScore());
+    int bestScore = GetBestLeaderboardScore(leaderboard);
+    if (bestScore > game.GetHighScore())
+    {
+        game.SetHighScore(bestScore);
+    }
+    SaveLeaderboard(LEADERBOARD_FILE, leaderboard);
+    SaveHighScore(HIGH_SCORE_FILE, game.GetHighScore());
+    gameOverScoreRecorded = true;
 }
 
 void DrawTextLine(HDC hdc, int x, int y, const std::string &text, int size = 24,
@@ -536,13 +564,56 @@ void DrawOverlayPanel(HDC hdc, const std::string &title, const std::string &acti
     DrawTextCentered(hdc, left, right, top + 138, detail, 17, RGB(170, 178, 158), FW_NORMAL);
 }
 
+void DrawGameOverOverlay(HDC hdc)
+{
+    int left = BOARD_LEFT + 18;
+    int right = BOARD_LEFT + CELL_SIZE * 10 - 18;
+    int top = BOARD_TOP + 112;
+    int bottom = BOARD_TOP + 438;
+    COLORREF accent = RGB(240, 101, 95);
+
+    FillRoundRectColor(hdc, left + 5, top + 7, right + 5, bottom + 7, 12,
+                       RGB(10, 12, 12), RGB(10, 12, 12));
+    FillRoundRectColor(hdc, left, top, right, bottom, 12,
+                       RGB(31, 35, 36), AdjustColor(accent, -65));
+    FillRectColor(hdc, left + 18, top + 16, right - 18, top + 20, accent);
+
+    DrawTextCentered(hdc, left, right, top + 38, "GAME OVER", 34, RGB(248, 244, 225), FW_BOLD);
+    DrawTextCentered(hdc, left, right, top + 84, "PRESS ANY KEY", 18, accent, FW_BOLD);
+    DrawTextCentered(hdc, left, right, top + 118,
+                     "Score " + std::to_string(game.GetScore()) + "   Best " + std::to_string(game.GetHighScore()),
+                     17, RGB(170, 178, 158), FW_NORMAL);
+    DrawTextCentered(hdc, left, right, top + 154, "TOP SCORES", 18, RGB(248, 244, 225), FW_BOLD);
+
+    std::vector<LeaderboardEntry> ranked = NormalizeLeaderboard(leaderboard);
+    int rowsToDraw = static_cast<int>(ranked.size());
+    if (rowsToDraw > 3)
+    {
+        rowsToDraw = 3;
+    }
+
+    if (rowsToDraw == 0)
+    {
+        DrawTextCentered(hdc, left, right, top + 190, "NO SCORES YET", 16, RGB(132, 142, 126), FW_NORMAL);
+        return;
+    }
+
+    for (int index = 0; index < rowsToDraw; index++)
+    {
+        int rowTop = top + 184 + index * 34;
+        std::string rank = std::to_string(index + 1) + ".";
+        DrawTextLine(hdc, left + 44, rowTop, rank, 17, RGB(123, 205, 236), FW_BOLD);
+        DrawTextLine(hdc, left + 82, rowTop, ranked[index].name, 17, RGB(248, 244, 225), FW_BOLD);
+        DrawTextLine(hdc, right - 104, rowTop, std::to_string(ranked[index].score),
+                     17, RGB(249, 214, 124), FW_BOLD);
+    }
+}
+
 void DrawStateOverlay(HDC hdc)
 {
     if (game.IsGameOver())
     {
-        DrawOverlayPanel(hdc, "GAME OVER", "PRESS ANY KEY",
-                         "Score " + std::to_string(game.GetScore()) + "   Best " + std::to_string(game.GetHighScore()),
-                         RGB(240, 101, 95));
+        DrawGameOverOverlay(hdc);
     }
     else if (!game.IsStarted())
     {
@@ -787,6 +858,7 @@ void UpdateLockDelay(HWND hwnd)
 void FinishClearFlash(HWND hwnd)
 {
     game.FinishLineClear();
+    RecordGameOverScoreIfNeeded();
     KillTimer(hwnd, FLASH_TIMER_ID);
     SetTimer(hwnd, TIMER_ID, game.GetDropIntervalMs(), nullptr);
 }
@@ -794,6 +866,7 @@ void FinishClearFlash(HWND hwnd)
 void FinishLockDelay(HWND hwnd)
 {
     game.FinishLockDelay();
+    RecordGameOverScoreIfNeeded();
     KillTimer(hwnd, LOCK_TIMER_ID);
     lockDelayTimerRunning = false;
     UpdateClearFlash(hwnd);
@@ -952,6 +1025,7 @@ void ApplyGameInput(HWND hwnd, int input)
     UpdateLockDelay(hwnd);
     UpdateClearFlash(hwnd);
     UpdateLevelFlash(hwnd);
+    RecordGameOverScoreIfNeeded();
     InvalidateRect(hwnd, nullptr, FALSE);
 }
 
@@ -1256,6 +1330,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         UpdateLockDelay(hwnd);
         UpdateClearFlash(hwnd);
         UpdateLevelFlash(hwnd);
+        RecordGameOverScoreIfNeeded();
         if (!game.IsLineClearPending() && !game.IsLockDelayActive())
         {
             SetTimer(hwnd, TIMER_ID, game.GetDropIntervalMs(), nullptr);
@@ -1324,7 +1399,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int showCommand)
 {
     LoadGameFont();
-    game.SetHighScore(LoadHighScore(HIGH_SCORE_FILE));
+    leaderboard = LoadLeaderboard(LEADERBOARD_FILE);
+    int savedHighScore = LoadHighScore(HIGH_SCORE_FILE);
+    if (leaderboard.empty() && savedHighScore > 0)
+    {
+        leaderboard = AddLeaderboardScore(leaderboard, savedHighScore);
+        SaveLeaderboard(LEADERBOARD_FILE, leaderboard);
+    }
+    int leaderboardHighScore = GetBestLeaderboardScore(leaderboard);
+    game.SetHighScore(savedHighScore > leaderboardHighScore ? savedHighScore : leaderboardHighScore);
     ApplyRuntimeSettings(LoadSettings(SETTINGS_FILE));
 
     const char className[] = "HuiShanTetrisWindow";
@@ -1365,6 +1448,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int showCommand)
     }
 
     SaveHighScore(HIGH_SCORE_FILE, game.GetHighScore());
+    SaveLeaderboard(LEADERBOARD_FILE, leaderboard);
     SaveSettings(SETTINGS_FILE, CollectRuntimeSettings());
     UnloadGameFont();
 

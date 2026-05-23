@@ -12,6 +12,7 @@ set(TETRIS_CORE_SOURCES
     src/game.cpp
     src/grid.cpp
     src/high_score.cpp
+    src/leaderboard.cpp
     src/position.cpp
     src/settings.cpp
     src/sound.cpp

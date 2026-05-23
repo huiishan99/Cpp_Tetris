@@ -16,6 +16,7 @@ score, and a dark pixel UI.
 - T-spin scoring plus custom L/J/I/S/Z style-spin clears
 - Faster line-clear flash, combo feedback, level-up feedback, and best score
 - Start, pause, restart, and game-over overlays
+- Local top-five leaderboard shown on the game-over screen
 - In-game tuning for DAS, ARR, clear effect speed, and sound
 - Pixel-style font with compact Win32 rendering
 - Lightweight sound cues for moves, drops, hold, rotate, clears, pause, and game over
@@ -51,7 +52,8 @@ Esc or F1 to close the panel. Settings are saved to `tetris_settings.txt`.
 | Style-spin clear | 400 / 700 / 1000 / 1200 |
 
 Level increases every 10 cleared lines. The drop speed ramps up as the level
-rises, and the best score is saved to `tetris_highscore.txt`.
+rises. Best score is saved to `tetris_highscore.txt`, and the local top-five
+leaderboard is saved to `tetris_leaderboard.txt`.
 
 ## Build And Play
 
@@ -92,7 +94,7 @@ cmake --build build --config Release
 The game rules are portable and can be tested without the Win32 window:
 
 ```bash
-c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp src/position.cpp src/settings.cpp src/sound.cpp -o /tmp/tetris_core_tests
+c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp src/leaderboard.cpp src/position.cpp src/settings.cpp src/sound.cpp -o /tmp/tetris_core_tests
 /tmp/tetris_core_tests
 ```
 
@@ -111,6 +113,7 @@ src/main.cpp        Win32 window, drawing, input, timers
 src/game.cpp        Game rules, scoring, hold, spin detection
 src/grid.cpp        Board storage and row clearing
 src/high_score.cpp  Best-score file
+src/leaderboard.cpp Local top-five leaderboard file
 src/settings.cpp    DAS, ARR, effect, and sound settings file
 src/sound.cpp       Tiny Windows beep cues, no-op elsewhere
 tests/core_tests.cpp

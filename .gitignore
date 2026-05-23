@@ -1,5 +1,7 @@
 tetris_highscore.txt
 tetris_highscore_test.tmp
+tetris_leaderboard.txt
+tetris_leaderboard_test.tmp
 tetris_settings.txt
 tetris_settings_test.tmp
 build/
