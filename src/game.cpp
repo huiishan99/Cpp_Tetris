@@ -9,18 +9,6 @@ const int DropIntervalStepMs = 25;
 const int MinimumDropIntervalMs = 100;
 const int UpcomingPreviewCount = 3;
 
-const Position WallKickOffsets[] = {
-    Position(0, 0),
-    Position(0, -1),
-    Position(0, 1),
-    Position(0, -2),
-    Position(0, 2),
-    Position(1, 0),
-    Position(1, -1),
-    Position(1, 1),
-    Position(-1, 0),
-};
-
 bool HasNeighborCell(const std::vector<Position> &cells, int row, int column)
 {
     for (const Position &cell : cells)
@@ -63,6 +51,53 @@ bool FindTSpinCenter(const std::vector<Position> &cells, int &centerRow, int &ce
         }
     }
     return false;
+}
+
+std::vector<Position> GetSrsKickOffsets(int blockId, int fromRotationState, int toRotationState)
+{
+    if (blockId == 4)
+    {
+        return {Position(0, 0)};
+    }
+
+    if (blockId == 3)
+    {
+        if (fromRotationState == 0 && toRotationState == 1)
+        {
+            return {Position(0, 0), Position(0, -2), Position(0, 1), Position(1, -2), Position(-2, 1)};
+        }
+        if (fromRotationState == 1 && toRotationState == 2)
+        {
+            return {Position(0, 0), Position(0, -1), Position(0, 2), Position(-2, -1), Position(1, 2)};
+        }
+        if (fromRotationState == 2 && toRotationState == 3)
+        {
+            return {Position(0, 0), Position(0, 2), Position(0, -1), Position(-1, 2), Position(2, -1)};
+        }
+        if (fromRotationState == 3 && toRotationState == 0)
+        {
+            return {Position(0, 0), Position(0, 1), Position(0, -2), Position(2, 1), Position(-1, -2)};
+        }
+    }
+
+    if (fromRotationState == 0 && toRotationState == 1)
+    {
+        return {Position(0, 0), Position(0, -1), Position(-1, -1), Position(2, 0), Position(2, -1)};
+    }
+    if (fromRotationState == 1 && toRotationState == 2)
+    {
+        return {Position(0, 0), Position(0, 1), Position(1, 1), Position(-2, 0), Position(-2, 1)};
+    }
+    if (fromRotationState == 2 && toRotationState == 3)
+    {
+        return {Position(0, 0), Position(0, 1), Position(-1, 1), Position(2, 0), Position(2, 1)};
+    }
+    if (fromRotationState == 3 && toRotationState == 0)
+    {
+        return {Position(0, 0), Position(0, -1), Position(1, -1), Position(-2, 0), Position(-2, -1)};
+    }
+
+    return {Position(0, 0)};
 }
 }
 
@@ -715,8 +750,10 @@ void Game::RotateBlock()
 {
     if (started && !gameOver && !paused && !lineClearPending)
     {
+        int fromRotationState = currentBlock.GetRotationState();
         currentBlock.Rotate();
-        if (!TryWallKick())
+        int toRotationState = currentBlock.GetRotationState();
+        if (!TryWallKick(fromRotationState, toRotationState))
         {
             currentBlock.UndoRotation();
         }
@@ -729,9 +766,10 @@ void Game::RotateBlock()
     }
 }
 
-bool Game::TryWallKick()
+bool Game::TryWallKick(int fromRotationState, int toRotationState)
 {
-    for (Position offset : WallKickOffsets)
+    std::vector<Position> kickOffsets = GetSrsKickOffsets(currentBlock.id, fromRotationState, toRotationState);
+    for (Position offset : kickOffsets)
     {
         currentBlock.Move(offset.row, offset.column);
         if (!IsBlockOutside() && BlockFits())

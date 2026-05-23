@@ -68,7 +68,7 @@ private:
     bool IsBlockOutside() const;
     bool IsBlockOutside(const Block &block) const;
     void RotateBlock();
-    bool TryWallKick();
+    bool TryWallKick(int fromRotationState, int toRotationState);
     bool IsCurrentTSpin() const;
     bool IsCurrentStyleSpin() const;
     bool CanMoveBlock(const Block &block, int rowOffset, int columnOffset) const;

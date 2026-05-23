@@ -43,3 +43,8 @@ void Block::UndoRotation()
         rotationState = cells.size() - 1;
     }
 }
+
+int Block::GetRotationState() const
+{
+    return rotationState;
+}

@@ -132,6 +132,53 @@ void TestRotationKickAllowsIBlockToRotateAtTop()
     }
 }
 
+void TestSrsKickMovesTBlockUpLeft()
+{
+    Grid grid;
+    grid.grid[7][5] = 7;
+    grid.grid[7][4] = 7;
+
+    TBlock block;
+    block.Move(5, 1);
+    Game game{block, OBlock(), grid};
+
+    game.Start();
+    game.HandleInput('w');
+
+    std::vector<Position> rotatedCells = game.GetCurrentBlockCells();
+    Expect(HasCell(rotatedCells, 4, 4), "SRS T kick can move a rotated block upward and left");
+    Expect(HasCell(rotatedCells, 5, 4), "SRS T kick keeps the kicked block in the expected column");
+    Expect(HasCell(rotatedCells, 5, 5), "SRS T kick preserves the rotated shape");
+    Expect(HasCell(rotatedCells, 6, 4), "SRS T kick lands in the first valid kicked position");
+}
+
+void TestSrsIBlockUsesSpecialKickTable()
+{
+    Grid grid;
+    grid.grid[4][0] = 7;
+    grid.grid[4][1] = 7;
+    grid.grid[4][2] = 7;
+    grid.grid[4][3] = 7;
+    grid.grid[4][4] = 7;
+    grid.grid[3][2] = 7;
+    grid.grid[8][1] = 7;
+    grid.grid[8][2] = 7;
+    grid.grid[8][3] = 7;
+
+    IBlock block;
+    block.Move(5, -3);
+    Game game{block, OBlock(), grid};
+
+    game.Start();
+    game.HandleInput('w');
+
+    std::vector<Position> rotatedCells = game.GetCurrentBlockCells();
+    Expect(HasCell(rotatedCells, 5, 0), "SRS I kick uses the special I offset column");
+    Expect(HasCell(rotatedCells, 6, 0), "SRS I kick keeps the vertical I shape");
+    Expect(HasCell(rotatedCells, 7, 0), "SRS I kick avoids blocked generic offsets");
+    Expect(HasCell(rotatedCells, 8, 0), "SRS I kick lands with the expected downward offset");
+}
+
 void TestStartGateBlocksMovementUntilInputStarts()
 {
     Game game;
@@ -520,6 +567,8 @@ int main()
     TestGridClearsMultipleRows();
     TestBlockRotationCycles();
     TestRotationKickAllowsIBlockToRotateAtTop();
+    TestSrsKickMovesTBlockUpLeft();
+    TestSrsIBlockUsesSpecialKickTable();
     TestStartGateBlocksMovementUntilInputStarts();
     TestSoftDropScoresOnePoint();
     TestBlockedSoftDropDoesNotScore();

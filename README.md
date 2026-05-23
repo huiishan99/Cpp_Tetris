@@ -12,6 +12,7 @@ score, and a dark pixel UI.
 - Hold, ghost landing, and a three-piece next queue for planning ahead
 - Short lock delay so grounded pieces can still be nudged into place
 - DAS/ARR-style hold-to-move input for smoother left and right slides
+- SRS-style wall kicks for cleaner rotations near walls, stacks, and spin slots
 - T-spin scoring plus custom L/J/I/S/Z style-spin clears
 - Faster line-clear flash, combo feedback, level-up feedback, and best score
 - Start, pause, restart, and game-over overlays

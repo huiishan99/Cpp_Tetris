@@ -26,6 +26,24 @@ specific edits.
 
 ## Entries
 
+### 2026-05-23 - Add SRS-style wall kicks
+
+- Changed: Replaced the generic wall-kick offsets with clockwise SRS-style
+  kick tables, including the I block's special offsets and O block no-op
+  handling. Exposed block rotation state for rule evaluation, expanded core
+  tests for T-piece and I-piece kicked rotations, and documented the improved
+  rotation feel in the README.
+- Why: Make rotations near walls, stacks, and spin slots feel closer to modern
+  Tetris and support more reliable spin setups.
+- Risk: Rotation outcomes can differ from the old generic kick table, so some
+  edge-case placements may now choose a different valid kicked position.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/position.cpp src/sound.cpp -o /private/tmp/tetris_core_tests` and ran
+  `/private/tmp/tetris_core_tests`; all core tests passed.
+- Follow-ups: Add counter-clockwise rotation later if the controls expand
+  beyond the current single rotate key.
+
 ### 2026-05-22 - Add DAS/ARR horizontal input
 
 - Changed: Added a Win32 input timer for left/right hold state, immediate
