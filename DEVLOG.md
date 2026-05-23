@@ -26,6 +26,27 @@ specific edits.
 
 ## Entries
 
+### 2026-05-23 - Persist settings
+
+- Changed: Added a portable settings module that reads and writes
+  `tetris_settings.txt`, sanitizes DAS/ARR/effect values, and stores the sound
+  toggle. The Win32 UI now loads settings on startup and saves them on exit.
+  Added settings persistence tests, included the new module in CMake, ignored
+  generated settings files, and updated README and roadmap notes.
+- Why: Keep F1 tuning choices across launches so Windows playtesting does not
+  require retuning every run.
+- Risk: Settings save on normal app exit; an abrupt crash or forced close may
+  lose the latest in-session tweak. The config format is intentionally simple
+  `key=value` text and unknown keys are ignored.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/position.cpp src/settings.cpp src/sound.cpp -o
+  /private/tmp/tetris_core_tests` and ran `/private/tmp/tetris_core_tests`;
+  all core tests passed. Windows GUI playtesting was not available in this
+  macOS environment.
+- Follow-ups: Playtest the saved settings flow on Windows and decide whether
+  settings should be saved immediately when changed instead of only on exit.
+
 ### 2026-05-23 - Add in-game settings overlay
 
 - Changed: Added an F1 settings overlay with selectable rows for DAS delay,

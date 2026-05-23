@@ -1,5 +1,6 @@
 #include "game.h"
 #include "high_score.h"
+#include "settings.h"
 #include "sound.h"
 #include <windows.h>
 #include <string>
@@ -15,18 +16,10 @@ const int FLASH_TIMER_ID = 2;
 const int LEVEL_TIMER_ID = 3;
 const int LOCK_TIMER_ID = 4;
 const int INPUT_TIMER_ID = 5;
-const int DEFAULT_CLEAR_FLASH_DURATION_MS = 170;
 const int LEVEL_FLASH_DURATION_MS = 900;
 const int LOCK_DELAY_MS = 420;
-const int DEFAULT_DAS_DELAY_MS = 145;
-const int DEFAULT_ARR_INTERVAL_MS = 35;
-const int MIN_DAS_DELAY_MS = 80;
-const int MAX_DAS_DELAY_MS = 250;
-const int MIN_ARR_INTERVAL_MS = 15;
-const int MAX_ARR_INTERVAL_MS = 80;
-const int MIN_CLEAR_FLASH_DURATION_MS = 90;
-const int MAX_CLEAR_FLASH_DURATION_MS = 240;
 const char *HIGH_SCORE_FILE = "tetris_highscore.txt";
+const char *SETTINGS_FILE = "tetris_settings.txt";
 const char *PIXEL_FONT_FILE = "Font\\monogram.ttf";
 const char *PIXEL_FONT_NAME = "monogram";
 const char *FALLBACK_FONT_NAME = "Segoe UI";
@@ -47,9 +40,9 @@ int observedLockDelayEventId = 0;
 DWORD clearFlashStartedAt = 0;
 DWORD levelFlashStartedAt = 0;
 DWORD lockDelayStartedAt = 0;
-int clearFlashDurationMs = DEFAULT_CLEAR_FLASH_DURATION_MS;
-int dasDelayMs = DEFAULT_DAS_DELAY_MS;
-int arrIntervalMs = DEFAULT_ARR_INTERVAL_MS;
+int clearFlashDurationMs = SettingsDefaultClearFlashDurationMs;
+int dasDelayMs = SettingsDefaultDasDelayMs;
+int arrIntervalMs = SettingsDefaultArrIntervalMs;
 int selectedSettingIndex = 0;
 bool pixelFontLoaded = false;
 bool lockDelayTimerRunning = false;
@@ -152,6 +145,25 @@ int ClampInt(int value, int minimum, int maximum)
         return maximum;
     }
     return value;
+}
+
+void ApplyRuntimeSettings(const GameSettings &settings)
+{
+    GameSettings sanitized = SanitizeSettings(settings);
+    dasDelayMs = sanitized.dasDelayMs;
+    arrIntervalMs = sanitized.arrIntervalMs;
+    clearFlashDurationMs = sanitized.clearFlashDurationMs;
+    SetSoundEnabled(sanitized.soundEnabled);
+}
+
+GameSettings CollectRuntimeSettings()
+{
+    return SanitizeSettings(GameSettings{
+        dasDelayMs,
+        arrIntervalMs,
+        clearFlashDurationMs,
+        IsSoundEnabled(),
+    });
 }
 
 void DrawTextLine(HDC hdc, int x, int y, const std::string &text, int size = 24,
@@ -611,17 +623,17 @@ void DrawSettingsRow(HDC hdc, int index, int top)
     if (index == SettingsDasDelay)
     {
         DrawSettingMeter(hdc, left + 160, top + 31, 160, dasDelayMs,
-                         MIN_DAS_DELAY_MS, MAX_DAS_DELAY_MS, accent);
+                         SettingsMinDasDelayMs, SettingsMaxDasDelayMs, accent);
     }
     else if (index == SettingsArrInterval)
     {
         DrawSettingMeter(hdc, left + 160, top + 31, 160, arrIntervalMs,
-                         MIN_ARR_INTERVAL_MS, MAX_ARR_INTERVAL_MS, accent);
+                         SettingsMinArrIntervalMs, SettingsMaxArrIntervalMs, accent);
     }
     else if (index == SettingsClearFlash)
     {
         DrawSettingMeter(hdc, left + 160, top + 31, 160, clearFlashDurationMs,
-                         MIN_CLEAR_FLASH_DURATION_MS, MAX_CLEAR_FLASH_DURATION_MS, accent);
+                         SettingsMinClearFlashDurationMs, SettingsMaxClearFlashDurationMs, accent);
     }
     else
     {
@@ -879,16 +891,16 @@ void AdjustSelectedSetting(int direction)
 {
     if (selectedSettingIndex == SettingsDasDelay)
     {
-        dasDelayMs = ClampInt(dasDelayMs + direction * 10, MIN_DAS_DELAY_MS, MAX_DAS_DELAY_MS);
+        dasDelayMs = ClampInt(dasDelayMs + direction * 10, SettingsMinDasDelayMs, SettingsMaxDasDelayMs);
     }
     else if (selectedSettingIndex == SettingsArrInterval)
     {
-        arrIntervalMs = ClampInt(arrIntervalMs + direction * 5, MIN_ARR_INTERVAL_MS, MAX_ARR_INTERVAL_MS);
+        arrIntervalMs = ClampInt(arrIntervalMs + direction * 5, SettingsMinArrIntervalMs, SettingsMaxArrIntervalMs);
     }
     else if (selectedSettingIndex == SettingsClearFlash)
     {
         clearFlashDurationMs = ClampInt(clearFlashDurationMs + direction * 10,
-                                        MIN_CLEAR_FLASH_DURATION_MS, MAX_CLEAR_FLASH_DURATION_MS);
+                                        SettingsMinClearFlashDurationMs, SettingsMaxClearFlashDurationMs);
     }
     else if (selectedSettingIndex == SettingsSound)
     {
@@ -1313,6 +1325,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int showCommand)
 {
     LoadGameFont();
     game.SetHighScore(LoadHighScore(HIGH_SCORE_FILE));
+    ApplyRuntimeSettings(LoadSettings(SETTINGS_FILE));
 
     const char className[] = "HuiShanTetrisWindow";
 
@@ -1352,6 +1365,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int showCommand)
     }
 
     SaveHighScore(HIGH_SCORE_FILE, game.GetHighScore());
+    SaveSettings(SETTINGS_FILE, CollectRuntimeSettings());
     UnloadGameFont();
 
     return static_cast<int>(message.wParam);

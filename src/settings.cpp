@@ -1,0 +1,116 @@
+#include "settings.h"
+
+#include <fstream>
+#include <sstream>
+
+namespace
+{
+int Clamp(int value, int minimum, int maximum)
+{
+    if (value < minimum)
+    {
+        return minimum;
+    }
+    if (value > maximum)
+    {
+        return maximum;
+    }
+    return value;
+}
+
+bool TryParseInt(const std::string &text, int &value)
+{
+    std::istringstream stream(text);
+    int parsed = 0;
+    if (!(stream >> parsed))
+    {
+        return false;
+    }
+    value = parsed;
+    return true;
+}
+}
+
+GameSettings GetDefaultSettings()
+{
+    return GameSettings{
+        SettingsDefaultDasDelayMs,
+        SettingsDefaultArrIntervalMs,
+        SettingsDefaultClearFlashDurationMs,
+        true,
+    };
+}
+
+GameSettings SanitizeSettings(const GameSettings &settings)
+{
+    GameSettings sanitized = settings;
+    sanitized.dasDelayMs = Clamp(sanitized.dasDelayMs, SettingsMinDasDelayMs, SettingsMaxDasDelayMs);
+    sanitized.arrIntervalMs = Clamp(sanitized.arrIntervalMs, SettingsMinArrIntervalMs, SettingsMaxArrIntervalMs);
+    sanitized.clearFlashDurationMs = Clamp(sanitized.clearFlashDurationMs,
+                                           SettingsMinClearFlashDurationMs,
+                                           SettingsMaxClearFlashDurationMs);
+    return sanitized;
+}
+
+GameSettings LoadSettings(const std::string &path)
+{
+    GameSettings settings = GetDefaultSettings();
+    std::ifstream file(path);
+    if (!file)
+    {
+        return settings;
+    }
+
+    std::string line;
+    while (std::getline(file, line))
+    {
+        std::string::size_type separator = line.find('=');
+        if (separator == std::string::npos)
+        {
+            continue;
+        }
+
+        std::string key = line.substr(0, separator);
+        std::string valueText = line.substr(separator + 1);
+        int value = 0;
+        if (!TryParseInt(valueText, value))
+        {
+            continue;
+        }
+
+        if (key == "das_delay_ms")
+        {
+            settings.dasDelayMs = value;
+        }
+        else if (key == "arr_interval_ms")
+        {
+            settings.arrIntervalMs = value;
+        }
+        else if (key == "clear_flash_ms")
+        {
+            settings.clearFlashDurationMs = value;
+        }
+        else if (key == "sound_enabled")
+        {
+            settings.soundEnabled = value != 0;
+        }
+    }
+
+    return SanitizeSettings(settings);
+}
+
+bool SaveSettings(const std::string &path, const GameSettings &settings)
+{
+    GameSettings sanitized = SanitizeSettings(settings);
+    std::ofstream file(path, std::ios::trunc);
+    if (!file)
+    {
+        return false;
+    }
+
+    file << "das_delay_ms=" << sanitized.dasDelayMs << '\n';
+    file << "arr_interval_ms=" << sanitized.arrIntervalMs << '\n';
+    file << "clear_flash_ms=" << sanitized.clearFlashDurationMs << '\n';
+    file << "sound_enabled=" << (sanitized.soundEnabled ? 1 : 0) << '\n';
+    return static_cast<bool>(file);
+}

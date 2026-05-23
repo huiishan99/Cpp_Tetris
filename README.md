@@ -38,7 +38,7 @@ score, and a dark pixel UI.
 | Q | Quit |
 
 Inside settings, use Up / Down to choose a row, Left / Right to adjust it, and
-Esc or F1 to close the panel.
+Esc or F1 to close the panel. Settings are saved to `tetris_settings.txt`.
 
 ## Scoring
 
@@ -92,7 +92,7 @@ cmake --build build --config Release
 The game rules are portable and can be tested without the Win32 window:
 
 ```bash
-c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp src/position.cpp src/sound.cpp -o /tmp/tetris_core_tests
+c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp src/position.cpp src/settings.cpp src/sound.cpp -o /tmp/tetris_core_tests
 /tmp/tetris_core_tests
 ```
 
@@ -111,6 +111,7 @@ src/main.cpp        Win32 window, drawing, input, timers
 src/game.cpp        Game rules, scoring, hold, spin detection
 src/grid.cpp        Board storage and row clearing
 src/high_score.cpp  Best-score file
+src/settings.cpp    DAS, ARR, effect, and sound settings file
 src/sound.cpp       Tiny Windows beep cues, no-op elsewhere
 tests/core_tests.cpp
 ```

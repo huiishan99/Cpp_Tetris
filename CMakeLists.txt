@@ -13,6 +13,7 @@ set(TETRIS_CORE_SOURCES
     src/grid.cpp
     src/high_score.cpp
     src/position.cpp
+    src/settings.cpp
     src/sound.cpp
 )
 

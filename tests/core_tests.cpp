@@ -2,6 +2,7 @@
 #include "game.h"
 #include "grid.h"
 #include "high_score.h"
+#include "settings.h"
 #include "sound.h"
 
 #include <cstdio>
@@ -369,6 +370,49 @@ void TestSoundToggleState()
     Expect(IsSoundEnabled(), "sound can be re-enabled");
 }
 
+void TestSettingsDefaultsAndPersistence()
+{
+    const char *path = "tetris_settings_test.tmp";
+    std::remove(path);
+
+    GameSettings defaults = LoadSettings(path);
+    Expect(defaults.dasDelayMs == SettingsDefaultDasDelayMs, "missing settings file uses default DAS");
+    Expect(defaults.arrIntervalMs == SettingsDefaultArrIntervalMs, "missing settings file uses default ARR");
+    Expect(defaults.clearFlashDurationMs == SettingsDefaultClearFlashDurationMs, "missing settings file uses default clear flash");
+    Expect(defaults.soundEnabled, "missing settings file enables sound by default");
+
+    GameSettings settings{
+        120,
+        25,
+        110,
+        false,
+    };
+    Expect(SaveSettings(path, settings), "settings file saves successfully");
+
+    GameSettings loaded = LoadSettings(path);
+    Expect(loaded.dasDelayMs == 120, "saved DAS loads successfully");
+    Expect(loaded.arrIntervalMs == 25, "saved ARR loads successfully");
+    Expect(loaded.clearFlashDurationMs == 110, "saved clear flash loads successfully");
+    Expect(!loaded.soundEnabled, "saved sound flag loads successfully");
+
+    std::remove(path);
+}
+
+void TestSettingsSanitizeInvalidValues()
+{
+    GameSettings settings{
+        -10,
+        999,
+        20,
+        true,
+    };
+
+    GameSettings sanitized = SanitizeSettings(settings);
+    Expect(sanitized.dasDelayMs == SettingsMinDasDelayMs, "DAS setting clamps to minimum");
+    Expect(sanitized.arrIntervalMs == SettingsMaxArrIntervalMs, "ARR setting clamps to maximum");
+    Expect(sanitized.clearFlashDurationMs == SettingsMinClearFlashDurationMs, "clear flash setting clamps to minimum");
+}
+
 void TestPauseStopsAutomaticDrop()
 {
     Game game;
@@ -648,6 +692,8 @@ int main()
     TestHighScoreSurvivesRestart();
     TestHighScoreFilePersistence();
     TestSoundToggleState();
+    TestSettingsDefaultsAndPersistence();
+    TestSettingsSanitizeInvalidValues();
     TestPauseStopsAutomaticDrop();
     TestRestartInputResetsRunningGame();
     TestGhostBlockPreviewIsBelowCurrentBlock();
