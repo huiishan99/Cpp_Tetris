@@ -6,15 +6,6 @@
 
 namespace
 {
-std::string NormalizeName(const std::string &name)
-{
-    if (name.empty())
-    {
-        return DefaultLeaderboardName;
-    }
-    return name.substr(0, 12);
-}
-
 bool TryParseInt(const std::string &text, int &value)
 {
     std::istringstream stream(text);
@@ -26,6 +17,15 @@ bool TryParseInt(const std::string &text, int &value)
     value = parsed;
     return true;
 }
+}
+
+std::string NormalizeLeaderboardName(const std::string &name)
+{
+    if (name.empty())
+    {
+        return DefaultLeaderboardName;
+    }
+    return name.substr(0, LeaderboardMaxNameLength);
 }
 
 std::vector<LeaderboardEntry> NormalizeLeaderboard(const std::vector<LeaderboardEntry> &entries,
@@ -43,7 +43,7 @@ std::vector<LeaderboardEntry> NormalizeLeaderboard(const std::vector<Leaderboard
         {
             continue;
         }
-        normalized.push_back(LeaderboardEntry{NormalizeName(entry.name), entry.score});
+        normalized.push_back(LeaderboardEntry{NormalizeLeaderboardName(entry.name), entry.score});
     }
 
     std::sort(normalized.begin(), normalized.end(),
@@ -58,13 +58,35 @@ std::vector<LeaderboardEntry> NormalizeLeaderboard(const std::vector<Leaderboard
     return normalized;
 }
 
+bool DoesScoreQualifyForLeaderboard(const std::vector<LeaderboardEntry> &entries,
+                                    int score,
+                                    int maxEntries)
+{
+    if (score <= 0)
+    {
+        return false;
+    }
+    if (maxEntries < 1)
+    {
+        maxEntries = 1;
+    }
+
+    std::vector<LeaderboardEntry> normalized = NormalizeLeaderboard(entries, maxEntries);
+    if (static_cast<int>(normalized.size()) < maxEntries)
+    {
+        return true;
+    }
+
+    return score >= normalized.back().score;
+}
+
 std::vector<LeaderboardEntry> AddLeaderboardScore(const std::vector<LeaderboardEntry> &entries,
                                                   int score,
                                                   const std::string &name,
                                                   int maxEntries)
 {
     std::vector<LeaderboardEntry> updated = entries;
-    updated.push_back(LeaderboardEntry{NormalizeName(name), score});
+    updated.push_back(LeaderboardEntry{NormalizeLeaderboardName(name), score});
     return NormalizeLeaderboard(updated, maxEntries);
 }
 

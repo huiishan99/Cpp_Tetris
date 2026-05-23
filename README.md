@@ -16,7 +16,7 @@ score, and a dark pixel UI.
 - T-spin scoring plus custom L/J/I/S/Z style-spin clears
 - Faster line-clear flash, combo feedback, level-up feedback, and best score
 - Start, pause, restart, and game-over overlays
-- Local top-five leaderboard shown on the game-over screen
+- Local top-five leaderboard with name entry on qualifying scores
 - In-game tuning for DAS, ARR, clear effect speed, and sound
 - Pixel-style font with compact Win32 rendering
 - Lightweight sound cues for moves, drops, hold, rotate, clears, pause, and game over
@@ -40,6 +40,8 @@ score, and a dark pixel UI.
 
 Inside settings, use Up / Down to choose a row, Left / Right to adjust it, and
 Esc or F1 to close the panel. Settings are saved to `tetris_settings.txt`.
+When a game-over score reaches the local leaderboard, type a 3-12 character
+name and press Enter, or press Esc to save it as `PLAYER`.
 
 ## Scoring
 

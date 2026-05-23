@@ -52,11 +52,14 @@ bool lockDelayTimerRunning = false;
 bool inputTimerRunning = false;
 bool settingsOpen = false;
 bool gameOverScoreRecorded = false;
+bool leaderboardNameEntryActive = false;
 bool leftHeld = false;
 bool rightHeld = false;
 int horizontalDirection = 0;
+int pendingLeaderboardScore = 0;
 DWORD horizontalHeldStartedAt = 0;
 DWORD lastHorizontalRepeatAt = 0;
+std::string leaderboardNameInput;
 
 const char *GetGameFontName()
 {
@@ -175,15 +178,40 @@ void RecordGameOverScoreIfNeeded()
     if (!game.IsGameOver())
     {
         gameOverScoreRecorded = false;
+        leaderboardNameEntryActive = false;
+        pendingLeaderboardScore = 0;
+        leaderboardNameInput.clear();
         return;
     }
 
-    if (gameOverScoreRecorded || game.GetScore() <= 0)
+    if (gameOverScoreRecorded || leaderboardNameEntryActive)
     {
         return;
     }
 
-    leaderboard = AddLeaderboardScore(leaderboard, game.GetScore());
+    int score = game.GetScore();
+    if (!DoesScoreQualifyForLeaderboard(leaderboard, score))
+    {
+        gameOverScoreRecorded = true;
+        return;
+    }
+
+    pendingLeaderboardScore = score;
+    leaderboardNameInput.clear();
+    leaderboardNameEntryActive = true;
+    leftHeld = false;
+    rightHeld = false;
+    horizontalDirection = 0;
+}
+
+void SubmitLeaderboardName(const std::string &name)
+{
+    if (!leaderboardNameEntryActive)
+    {
+        return;
+    }
+
+    leaderboard = AddLeaderboardScore(leaderboard, pendingLeaderboardScore, name);
     int bestScore = GetBestLeaderboardScore(leaderboard);
     if (bestScore > game.GetHighScore())
     {
@@ -191,6 +219,10 @@ void RecordGameOverScoreIfNeeded()
     }
     SaveLeaderboard(LEADERBOARD_FILE, leaderboard);
     SaveHighScore(HIGH_SCORE_FILE, game.GetHighScore());
+
+    leaderboardNameEntryActive = false;
+    leaderboardNameInput.clear();
+    pendingLeaderboardScore = 0;
     gameOverScoreRecorded = true;
 }
 
@@ -577,6 +609,32 @@ void DrawGameOverOverlay(HDC hdc)
     FillRoundRectColor(hdc, left, top, right, bottom, 12,
                        RGB(31, 35, 36), AdjustColor(accent, -65));
     FillRectColor(hdc, left + 18, top + 16, right - 18, top + 20, accent);
+
+    if (leaderboardNameEntryActive)
+    {
+        DrawTextCentered(hdc, left, right, top + 36, "NEW TOP SCORE", 30, RGB(248, 244, 225), FW_BOLD);
+        DrawTextCentered(hdc, left, right, top + 80, "TYPE YOUR NAME", 18, accent, FW_BOLD);
+        DrawTextCentered(hdc, left, right, top + 112,
+                         "Score " + std::to_string(pendingLeaderboardScore),
+                         18, RGB(170, 178, 158), FW_NORMAL);
+
+        int inputLeft = left + 38;
+        int inputRight = right - 38;
+        int inputTop = top + 152;
+        FillRoundRectColor(hdc, inputLeft, inputTop, inputRight, inputTop + 52, 8,
+                           RGB(18, 22, 22), RGB(123, 205, 236));
+
+        std::string displayName = leaderboardNameInput.empty() ? "___" : leaderboardNameInput + "_";
+        DrawTextCentered(hdc, inputLeft, inputRight, inputTop + 13,
+                         displayName, 24, RGB(248, 244, 225), FW_BOLD);
+        DrawTextCentered(hdc, left, right, top + 228,
+                         "A-Z 0-9   ENTER SAVE   ESC PLAYER",
+                         14, RGB(170, 178, 158), FW_NORMAL);
+        DrawTextCentered(hdc, left, right, top + 258,
+                         "3-12 CHARACTERS",
+                         14, RGB(123, 205, 236), FW_BOLD);
+        return;
+    }
 
     DrawTextCentered(hdc, left, right, top + 38, "GAME OVER", 34, RGB(248, 244, 225), FW_BOLD);
     DrawTextCentered(hdc, left, right, top + 84, "PRESS ANY KEY", 18, accent, FW_BOLD);
@@ -1014,6 +1072,52 @@ void HandleSettingsKey(HWND hwnd, WPARAM key)
     InvalidateRect(hwnd, nullptr, FALSE);
 }
 
+void HandleLeaderboardNameKey(HWND hwnd, WPARAM key)
+{
+    if (!leaderboardNameEntryActive)
+    {
+        return;
+    }
+
+    if (key == VK_ESCAPE)
+    {
+        SubmitLeaderboardName(DefaultLeaderboardName);
+        InvalidateRect(hwnd, nullptr, FALSE);
+        return;
+    }
+
+    if (key == VK_BACK)
+    {
+        if (!leaderboardNameInput.empty())
+        {
+            leaderboardNameInput.pop_back();
+        }
+        InvalidateRect(hwnd, nullptr, FALSE);
+        return;
+    }
+
+    if (key == VK_RETURN)
+    {
+        if (static_cast<int>(leaderboardNameInput.size()) >= LeaderboardMinNameLength)
+        {
+            SubmitLeaderboardName(leaderboardNameInput);
+        }
+        InvalidateRect(hwnd, nullptr, FALSE);
+        return;
+    }
+
+    if (static_cast<int>(leaderboardNameInput.size()) >= LeaderboardMaxNameLength)
+    {
+        return;
+    }
+
+    if ((key >= 'A' && key <= 'Z') || (key >= '0' && key <= '9'))
+    {
+        leaderboardNameInput.push_back(static_cast<char>(key));
+        InvalidateRect(hwnd, nullptr, FALSE);
+    }
+}
+
 void ApplyGameInput(HWND hwnd, int input)
 {
     if (input == 0)
@@ -1338,6 +1442,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
     case WM_KEYDOWN:
+        if (leaderboardNameEntryActive)
+        {
+            HandleLeaderboardNameKey(hwnd, wParam);
+            return 0;
+        }
         if (wParam == VK_F1)
         {
             ToggleSettings(hwnd);

@@ -4,6 +4,8 @@
 #include <vector>
 
 constexpr int LeaderboardMaxEntries = 5;
+constexpr int LeaderboardMinNameLength = 3;
+constexpr int LeaderboardMaxNameLength = 12;
 constexpr const char *DefaultLeaderboardName = "PLAYER";
 
 struct LeaderboardEntry
@@ -12,8 +14,12 @@ struct LeaderboardEntry
     int score;
 };
 
+std::string NormalizeLeaderboardName(const std::string &name);
 std::vector<LeaderboardEntry> NormalizeLeaderboard(const std::vector<LeaderboardEntry> &entries,
                                                    int maxEntries = LeaderboardMaxEntries);
+bool DoesScoreQualifyForLeaderboard(const std::vector<LeaderboardEntry> &entries,
+                                    int score,
+                                    int maxEntries = LeaderboardMaxEntries);
 std::vector<LeaderboardEntry> AddLeaderboardScore(const std::vector<LeaderboardEntry> &entries,
                                                   int score,
                                                   const std::string &name = DefaultLeaderboardName,

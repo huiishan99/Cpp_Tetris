@@ -446,6 +446,24 @@ void TestLeaderboardAddsScoreAndBestScore()
     Expect(GetBestLeaderboardScore(ranked) == 350, "best leaderboard score reports the top score");
 }
 
+void TestLeaderboardQualificationAndNameNormalization()
+{
+    std::vector<LeaderboardEntry> entries = {
+        {"AAA", 500},
+        {"BBB", 400},
+        {"CCC", 300},
+        {"DDD", 200},
+        {"EEE", 100},
+    };
+
+    Expect(DoesScoreQualifyForLeaderboard(entries, 100), "score equal to the last slot qualifies");
+    Expect(!DoesScoreQualifyForLeaderboard(entries, 99), "score below a full leaderboard does not qualify");
+    Expect(!DoesScoreQualifyForLeaderboard(entries, 0), "zero score does not qualify");
+    Expect(DoesScoreQualifyForLeaderboard({{"AAA", 500}}, 10), "positive score qualifies when leaderboard has room");
+    Expect(NormalizeLeaderboardName("") == DefaultLeaderboardName, "empty leaderboard name uses the default");
+    Expect(NormalizeLeaderboardName("ABCDEFGHIJKLMNO") == "ABCDEFGHIJKL", "long leaderboard name is trimmed");
+}
+
 void TestLeaderboardFilePersistence()
 {
     const char *path = "tetris_leaderboard_test.tmp";
@@ -752,6 +770,7 @@ int main()
     TestSettingsSanitizeInvalidValues();
     TestLeaderboardSortsAndLimitsEntries();
     TestLeaderboardAddsScoreAndBestScore();
+    TestLeaderboardQualificationAndNameNormalization();
     TestLeaderboardFilePersistence();
     TestPauseStopsAutomaticDrop();
     TestRestartInputResetsRunningGame();

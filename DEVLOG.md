@@ -26,6 +26,26 @@ specific edits.
 
 ## Entries
 
+### 2026-05-23 - Add leaderboard name entry
+
+- Changed: Added leaderboard qualification checks, public name normalization,
+  and Win32 game-over name entry for qualifying scores. Players can enter
+  3-12 uppercase letters or digits, press Enter to save, or press Esc to save
+  as `PLAYER`. Updated README and roadmap notes and expanded core tests for
+  qualification and name normalization.
+- Why: Give leaderboard scores player identity instead of storing every entry
+  under the default name.
+- Risk: Name entry is Win32 UI behavior and still needs Windows playtesting.
+  The first pass intentionally allows only uppercase letters and digits.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp src/sound.cpp -o
+  /private/tmp/tetris_core_tests` and ran `/private/tmp/tetris_core_tests`;
+  all core tests passed. Windows GUI playtesting was not available in this
+  macOS environment.
+- Follow-ups: Add a default player name setting and confirm the name-entry
+  overlay layout on Windows.
+
 ### 2026-05-23 - Add local leaderboard
 
 - Changed: Added a portable leaderboard module for top-five score sorting,
