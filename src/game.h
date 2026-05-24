@@ -35,10 +35,16 @@ public:
     int GetLastClearScore() const;
     bool WasLastClearSpin() const;
     bool WasLastClearTSpin() const;
+    bool WasLastClearBackToBack() const;
+    bool WasLastClearPerfectClear() const;
     int GetLastClearSpinBlockId() const;
+    int GetLastComboBonus() const;
+    int GetLastBackToBackBonus() const;
+    int GetLastPerfectClearBonus() const;
     const std::vector<int> &GetLastClearedRows() const;
     int GetClearEventId() const;
     int GetCombo() const;
+    bool IsBackToBackReady() const;
     int GetLevelUpEventId() const;
     int GetLastLevelReached() const;
     int GetLevel() const;
@@ -54,6 +60,9 @@ public:
     static int CalculateLineClearScore(int completedLines);
     static int CalculateTSpinScore(int completedLines);
     static int CalculateStyleSpinScore(int completedLines);
+    static int CalculateComboBonus(int comboCount);
+    static int CalculateBackToBackBonus(int clearScore);
+    static int CalculatePerfectClearBonus(int completedLines);
     static int CalculateLevel(int completedLines);
     static int CalculateDropIntervalMs(int level);
 
@@ -72,6 +81,7 @@ private:
     bool TryWallKick(int fromRotationState, int toRotationState);
     bool IsCurrentTSpin() const;
     bool IsCurrentStyleSpin() const;
+    bool IsPerfectClearAfterClearingRows(const std::vector<int> &fullRows) const;
     bool CanMoveBlock(const Block &block, int rowOffset, int columnOffset) const;
     void StartLockDelay();
     void RefreshLockDelay();
@@ -84,7 +94,7 @@ private:
     bool BlockFits() const;
     bool BlockFits(const Block &block) const;
     void Reset();
-    void UpdateScore(int LinesCleared, int moveDownPoints, int spinBlockId = 0);
+    void UpdateScore(int LinesCleared, int moveDownPoints, int spinBlockId = 0, int clearScoreOverride = -1);
     void UpdateHighScore();
     void TogglePause();
     Grid grid;
@@ -102,6 +112,9 @@ private:
     bool hasHeldBlock;
     bool holdUsed;
     bool lastSuccessfulActionWasRotate;
+    bool backToBackReady;
+    bool lastClearWasBackToBack;
+    bool lastClearWasPerfectClear;
     bool lastClearWasTSpin;
     int lastClearSpinBlockId;
     int score;
@@ -109,6 +122,9 @@ private:
     int linesCleared;
     int lastClearLines;
     int lastClearScore;
+    int lastComboBonus;
+    int lastBackToBackBonus;
+    int lastPerfectClearBonus;
     std::vector<int> lastClearedRows;
     int clearEventId;
     int combo;

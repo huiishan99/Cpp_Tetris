@@ -525,6 +525,34 @@ std::string GetSpinLabel(int blockId)
     }
 }
 
+std::string BuildClearHeadline()
+{
+    std::string clearLabel = GetClearLabel(game.GetLastClearLines());
+    if (game.WasLastClearPerfectClear())
+    {
+        return "PERFECT CLEAR";
+    }
+    if (game.WasLastClearSpin())
+    {
+        return GetSpinLabel(game.GetLastClearSpinBlockId()) + " " + clearLabel;
+    }
+    return clearLabel;
+}
+
+std::string BuildClearDetail()
+{
+    std::string detail = "+" + std::to_string(game.GetLastClearScore());
+    if (game.WasLastClearBackToBack())
+    {
+        detail += "  B2B";
+    }
+    if (game.GetCombo() > 1)
+    {
+        detail += "  COMBO x" + std::to_string(game.GetCombo());
+    }
+    return detail;
+}
+
 void DrawStatusPanel(HDC hdc, int x, int y, int width)
 {
     std::string status = "READY";
@@ -570,16 +598,8 @@ void DrawStatusPanel(HDC hdc, int x, int y, int width)
     else if (game.GetLastClearLines() > 0 && game.IsStarted() && !game.IsGameOver() &&
              !game.IsPaused() && !settingsOpen)
     {
-        std::string clearText = game.WasLastClearSpin()
-                                    ? GetSpinLabel(game.GetLastClearSpinBlockId())
-                                    : GetClearLabel(game.GetLastClearLines());
-        std::string scoreText = "+" + std::to_string(game.GetLastClearScore());
-        DrawTextLine(hdc, x + 14, y + 30, clearText, 22, RGB(249, 214, 124), FW_BOLD);
-        DrawTextLine(hdc, x + 104, y + 33, scoreText, 18, RGB(248, 244, 225), FW_BOLD);
-        std::string detailText = game.WasLastClearSpin()
-                                     ? GetClearLabel(game.GetLastClearLines()) + "   Combo x" + std::to_string(game.GetCombo())
-                                     : "Combo x" + std::to_string(game.GetCombo());
-        DrawTextLine(hdc, x + 14, y + 56, detailText, 16, RGB(170, 178, 158), FW_NORMAL);
+        DrawTextLine(hdc, x + 14, y + 30, BuildClearHeadline(), 20, RGB(249, 214, 124), FW_BOLD);
+        DrawTextLine(hdc, x + 14, y + 56, BuildClearDetail(), 16, RGB(248, 244, 225), FW_BOLD);
     }
     else
     {

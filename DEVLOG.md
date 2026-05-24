@@ -26,6 +26,24 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Add combo, B2B, and perfect clear feedback
+
+- Changed: Added combo score bonuses, back-to-back difficult-clear tracking,
+  perfect clear detection, score breakdown accessors, status-panel feedback,
+  README scoring notes, and core tests for the new scoring states.
+- Why: Make clears feel more rewarding and give advanced play a clearer arcade
+  payoff beyond the base line-clear score.
+- Risk: Scoring changed for consecutive clears and perfect clears. Existing
+  high scores remain readable, but future scores can be higher than older
+  versions for the same board sequence.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp src/sound.cpp -o
+  /private/tmp/tetris_core_tests` and ran `/private/tmp/tetris_core_tests`;
+  all core tests passed.
+- Follow-ups: Add richer audio cues for B2B and perfect clear after Windows
+  sound testing.
+
 ### 2026-05-25 - Polish menu keyboard handling
 
 - Changed: Let `Q` quit from the main and pause menus, and clear held

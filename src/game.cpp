@@ -150,6 +150,9 @@ Game::Game()
     hasHeldBlock = false;
     holdUsed = false;
     lastSuccessfulActionWasRotate = false;
+    backToBackReady = false;
+    lastClearWasBackToBack = false;
+    lastClearWasPerfectClear = false;
     lastClearWasTSpin = false;
     lastClearSpinBlockId = 0;
     score = 0;
@@ -157,6 +160,9 @@ Game::Game()
     linesCleared = 0;
     lastClearLines = 0;
     lastClearScore = 0;
+    lastComboBonus = 0;
+    lastBackToBackBonus = 0;
+    lastPerfectClearBonus = 0;
     clearEventId = 0;
     combo = 0;
     levelUpEventId = 0;
@@ -180,6 +186,9 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock)
     hasHeldBlock = false;
     holdUsed = false;
     lastSuccessfulActionWasRotate = false;
+    backToBackReady = false;
+    lastClearWasBackToBack = false;
+    lastClearWasPerfectClear = false;
     lastClearWasTSpin = false;
     lastClearSpinBlockId = 0;
     score = 0;
@@ -187,6 +196,9 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock)
     linesCleared = 0;
     lastClearLines = 0;
     lastClearScore = 0;
+    lastComboBonus = 0;
+    lastBackToBackBonus = 0;
+    lastPerfectClearBonus = 0;
     clearEventId = 0;
     combo = 0;
     levelUpEventId = 0;
@@ -210,6 +222,9 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock, const Grid &i
     hasHeldBlock = false;
     holdUsed = false;
     lastSuccessfulActionWasRotate = false;
+    backToBackReady = false;
+    lastClearWasBackToBack = false;
+    lastClearWasPerfectClear = false;
     lastClearWasTSpin = false;
     lastClearSpinBlockId = 0;
     score = 0;
@@ -217,6 +232,9 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock, const Grid &i
     linesCleared = 0;
     lastClearLines = 0;
     lastClearScore = 0;
+    lastComboBonus = 0;
+    lastBackToBackBonus = 0;
+    lastPerfectClearBonus = 0;
     clearEventId = 0;
     combo = 0;
     levelUpEventId = 0;
@@ -245,6 +263,9 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock, const Grid &i
     hasHeldBlock = false;
     holdUsed = false;
     lastSuccessfulActionWasRotate = false;
+    backToBackReady = false;
+    lastClearWasBackToBack = false;
+    lastClearWasPerfectClear = false;
     lastClearWasTSpin = false;
     lastClearSpinBlockId = 0;
     score = 0;
@@ -252,6 +273,9 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock, const Grid &i
     linesCleared = initialLinesCleared;
     lastClearLines = 0;
     lastClearScore = 0;
+    lastComboBonus = 0;
+    lastBackToBackBonus = 0;
+    lastPerfectClearBonus = 0;
     clearEventId = 0;
     combo = 0;
     levelUpEventId = 0;
@@ -409,9 +433,34 @@ bool Game::WasLastClearTSpin() const
     return lastClearWasTSpin;
 }
 
+bool Game::WasLastClearBackToBack() const
+{
+    return lastClearWasBackToBack;
+}
+
+bool Game::WasLastClearPerfectClear() const
+{
+    return lastClearWasPerfectClear;
+}
+
 int Game::GetLastClearSpinBlockId() const
 {
     return lastClearSpinBlockId;
+}
+
+int Game::GetLastComboBonus() const
+{
+    return lastComboBonus;
+}
+
+int Game::GetLastBackToBackBonus() const
+{
+    return lastBackToBackBonus;
+}
+
+int Game::GetLastPerfectClearBonus() const
+{
+    return lastPerfectClearBonus;
 }
 
 const std::vector<int> &Game::GetLastClearedRows() const
@@ -427,6 +476,11 @@ int Game::GetClearEventId() const
 int Game::GetCombo() const
 {
     return combo;
+}
+
+bool Game::IsBackToBackReady() const
+{
+    return backToBackReady;
 }
 
 int Game::GetLevelUpEventId() const
@@ -535,6 +589,41 @@ int Game::CalculateStyleSpinScore(int completedLines)
         return 1000;
     case 4:
         return 1200;
+    default:
+        return 0;
+    }
+}
+
+int Game::CalculateComboBonus(int comboCount)
+{
+    if (comboCount <= 1)
+    {
+        return 0;
+    }
+    return (comboCount - 1) * 50;
+}
+
+int Game::CalculateBackToBackBonus(int clearScore)
+{
+    if (clearScore <= 0)
+    {
+        return 0;
+    }
+    return clearScore / 2;
+}
+
+int Game::CalculatePerfectClearBonus(int completedLines)
+{
+    switch (completedLines)
+    {
+    case 1:
+        return 800;
+    case 2:
+        return 1200;
+    case 3:
+        return 1800;
+    case 4:
+        return 3200;
     default:
         return 0;
     }
@@ -884,6 +973,31 @@ bool Game::IsCurrentStyleSpin() const
            !CanMoveBlock(currentBlock, 1, 0);
 }
 
+bool Game::IsPerfectClearAfterClearingRows(const std::vector<int> &fullRows) const
+{
+    for (int row = 0; row < 20; row++)
+    {
+        bool rowWillClear = false;
+        for (int fullRow : fullRows)
+        {
+            if (row == fullRow)
+            {
+                rowWillClear = true;
+                break;
+            }
+        }
+
+        for (int column = 0; column < 10; column++)
+        {
+            if (grid.grid[row][column] != 0 && !rowWillClear)
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 bool Game::CanMoveBlock(const Block &block, int rowOffset, int columnOffset) const
 {
     Block movedBlock = block;
@@ -947,6 +1061,11 @@ void Game::LockBlock()
     combo = 0;
     lastClearLines = 0;
     lastClearScore = 0;
+    lastComboBonus = 0;
+    lastBackToBackBonus = 0;
+    lastPerfectClearBonus = 0;
+    lastClearWasBackToBack = false;
+    lastClearWasPerfectClear = false;
     lastClearWasTSpin = false;
     lastClearSpinBlockId = 0;
     lastClearedRows.clear();
@@ -959,22 +1078,40 @@ void Game::StartLineClear(const std::vector<int> &fullRows)
     lineClearPending = true;
     combo++;
     lastClearLines = rowsCleared;
+    int baseClearScore = 0;
     if (lastClearWasTSpin)
     {
-        lastClearScore = CalculateTSpinScore(rowsCleared);
+        baseClearScore = CalculateTSpinScore(rowsCleared);
     }
     else if (lastClearSpinBlockId != 0)
     {
-        lastClearScore = CalculateStyleSpinScore(rowsCleared);
+        baseClearScore = CalculateStyleSpinScore(rowsCleared);
     }
     else
     {
-        lastClearScore = CalculateLineClearScore(rowsCleared);
+        baseClearScore = CalculateLineClearScore(rowsCleared);
     }
+
+    bool difficultClear = rowsCleared == 4 || lastClearSpinBlockId != 0;
+    lastClearWasBackToBack = difficultClear && backToBackReady;
+    lastClearWasPerfectClear = IsPerfectClearAfterClearingRows(fullRows);
+    lastComboBonus = CalculateComboBonus(combo);
+    lastBackToBackBonus = lastClearWasBackToBack ? CalculateBackToBackBonus(baseClearScore) : 0;
+    lastPerfectClearBonus = lastClearWasPerfectClear ? CalculatePerfectClearBonus(rowsCleared) : 0;
+    lastClearScore = baseClearScore + lastComboBonus + lastBackToBackBonus + lastPerfectClearBonus;
+    if (difficultClear)
+    {
+        backToBackReady = true;
+    }
+    else
+    {
+        backToBackReady = false;
+    }
+
     lastClearedRows = fullRows;
     clearEventId++;
     PlayLineClearSound(rowsCleared, lastClearSpinBlockId != 0);
-    UpdateScore(rowsCleared, 0, lastClearSpinBlockId);
+    UpdateScore(rowsCleared, 0, lastClearSpinBlockId, lastClearScore);
 }
 
 void Game::FinishLockDelay()
@@ -1104,12 +1241,18 @@ void Game::Reset()
     hasHeldBlock = false;
     holdUsed = false;
     lastSuccessfulActionWasRotate = false;
+    backToBackReady = false;
+    lastClearWasBackToBack = false;
+    lastClearWasPerfectClear = false;
     lastClearWasTSpin = false;
     lastClearSpinBlockId = 0;
     score = 0;
     linesCleared = 0;
     lastClearLines = 0;
     lastClearScore = 0;
+    lastComboBonus = 0;
+    lastBackToBackBonus = 0;
+    lastPerfectClearBonus = 0;
     lastClearedRows.clear();
     clearEventId = 0;
     combo = 0;
@@ -1118,10 +1261,14 @@ void Game::Reset()
     lockDelayEventId = 0;
 }
 
-void Game::UpdateScore(int linesCompleted, int moveDownPoints, int spinBlockId)
+void Game::UpdateScore(int linesCompleted, int moveDownPoints, int spinBlockId, int clearScoreOverride)
 {
     int previousLevel = GetLevel();
-    if (spinBlockId == 6)
+    if (clearScoreOverride >= 0)
+    {
+        score += clearScoreOverride;
+    }
+    else if (spinBlockId == 6)
     {
         score += CalculateTSpinScore(linesCompleted);
     }

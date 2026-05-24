@@ -620,6 +620,7 @@ void TestLineClearFeedbackAndComboReset()
             grid.grid[19][column] = 7;
         }
     }
+    grid.grid[17][0] = 7;
 
     Game game{IBlock(), OBlock(), grid};
     game.Start();
@@ -640,6 +641,8 @@ void TestLineClearFeedbackAndComboReset()
     Expect(pendingRowStillFilled, "line clear keeps the completed row visible during animation");
     Expect(game.GetLastClearLines() == 1, "line clear feedback stores cleared line count");
     Expect(game.GetLastClearScore() == 100, "line clear feedback stores clear score");
+    Expect(!game.WasLastClearBackToBack(), "normal line clear is not marked as back-to-back");
+    Expect(!game.WasLastClearPerfectClear(), "line clear with remaining blocks is not a perfect clear");
     Expect(!game.WasLastClearSpin(), "normal line clear is not marked as a spin");
     Expect(!game.WasLastClearTSpin(), "normal line clear is not marked as T-spin");
     Expect(game.GetLastClearedRows().size() == 1 && game.GetLastClearedRows()[0] == 19, "line clear feedback stores cleared row index");
@@ -667,6 +670,93 @@ void TestLineClearFeedbackAndComboReset()
     Expect(game.GetLastClearLines() == 0, "non-clear lock resets clear line feedback");
     Expect(game.GetLastClearScore() == 0, "non-clear lock resets clear score feedback");
     Expect(game.GetCombo() == 0, "non-clear lock resets combo");
+}
+
+void TestPerfectClearFeedbackAndScore()
+{
+    Grid grid;
+    for (int column = 0; column < 10; column++)
+    {
+        if (column < 3 || column > 6)
+        {
+            grid.grid[19][column] = 7;
+        }
+    }
+
+    Game game{IBlock(), OBlock(), grid};
+    game.Start();
+    game.HandleInput(' ');
+
+    Expect(game.IsLineClearPending(), "perfect clear waits for clear animation");
+    Expect(game.WasLastClearPerfectClear(), "emptying the board marks a perfect clear");
+    Expect(game.GetLastPerfectClearBonus() == 800, "single-line perfect clear stores the bonus");
+    Expect(game.GetLastClearScore() == 900, "perfect clear adds base clear score and perfect bonus");
+}
+
+void TestComboBonusOnConsecutiveClears()
+{
+    Grid grid;
+    for (int row = 17; row <= 19; row++)
+    {
+        for (int column = 0; column < 10; column++)
+        {
+            if (column < 3 || column > 6)
+            {
+                grid.grid[row][column] = 7;
+            }
+        }
+    }
+
+    Game game{IBlock(), IBlock(), grid};
+    game.Start();
+    game.HandleInput(' ');
+    game.FinishLineClear();
+    game.HandleInput(' ');
+
+    Expect(game.GetCombo() == 2, "consecutive clears increase combo count");
+    Expect(game.GetLastComboBonus() == 50, "second consecutive clear stores combo bonus");
+    Expect(game.GetLastClearScore() == 150, "combo bonus is included in last clear score");
+}
+
+void TestBackToBackTetrisBonus()
+{
+    Grid grid;
+    grid.grid[11][0] = 7;
+    for (int row = 12; row <= 19; row++)
+    {
+        for (int column = 0; column < 10; column++)
+        {
+            if (column != 3)
+            {
+                grid.grid[row][column] = 7;
+            }
+        }
+    }
+
+    IBlock firstBlock;
+    firstBlock.Rotate();
+    firstBlock.Move(17, -2);
+    IBlock secondBlock;
+    secondBlock.Rotate();
+    secondBlock.Move(17, -2);
+
+    Game game{firstBlock, secondBlock, grid};
+    game.Start();
+    game.HandleInput(' ');
+
+    Expect(game.GetLastClearLines() == 4, "first vertical I clear is a Tetris");
+    Expect(!game.WasLastClearBackToBack(), "first difficult clear starts but does not consume B2B");
+    Expect(game.IsBackToBackReady(), "first difficult clear arms B2B");
+
+    game.FinishLineClear();
+    game.HandleInput(' ');
+
+    Expect(game.GetLastClearLines() == 4, "second vertical I clear is a Tetris");
+    Expect(game.WasLastClearBackToBack(), "second consecutive difficult clear is marked B2B");
+    Expect(game.GetLastBackToBackBonus() == 400, "B2B Tetris bonus stores half the base score");
+    Expect(game.GetLastComboBonus() == 50, "B2B clear can also carry combo bonus");
+    Expect(!game.WasLastClearPerfectClear(), "remaining blocks prevent perfect clear on B2B test");
+    Expect(game.GetLastClearScore() == 1250, "B2B clear score includes base, combo, and B2B bonus");
 }
 
 void TestTSpinSingleFeedbackAndScore()
@@ -762,6 +852,11 @@ void TestLevelAndDropSpeedProgression()
     Expect(Game::CalculateTSpinScore(3) == 1600, "T-spin triple uses its bonus score");
     Expect(Game::CalculateStyleSpinScore(1) == 400, "style-spin single uses its bonus score");
     Expect(Game::CalculateStyleSpinScore(4) == 1200, "style-spin four-line clear uses its bonus score");
+    Expect(Game::CalculateComboBonus(1) == 0, "first combo clear has no combo bonus");
+    Expect(Game::CalculateComboBonus(3) == 100, "combo bonus scales after consecutive clears");
+    Expect(Game::CalculateBackToBackBonus(800) == 400, "back-to-back bonus is half of the clear score");
+    Expect(Game::CalculatePerfectClearBonus(1) == 800, "single-line perfect clear uses its bonus");
+    Expect(Game::CalculatePerfectClearBonus(4) == 3200, "four-line perfect clear uses its bonus");
     Expect(Game::CalculateLevel(0) == 1, "level starts at one");
     Expect(Game::CalculateLevel(9) == 1, "level stays one before ten lines");
     Expect(Game::CalculateLevel(10) == 2, "level increases every ten lines");
@@ -804,6 +899,9 @@ int main()
     TestUpcomingBlockQueueAdvances();
     TestHoldStoresCurrentBlockOncePerDrop();
     TestLineClearFeedbackAndComboReset();
+    TestPerfectClearFeedbackAndScore();
+    TestComboBonusOnConsecutiveClears();
+    TestBackToBackTetrisBonus();
     TestTSpinSingleFeedbackAndScore();
     TestStyleSpinSingleFeedbackAndScore();
     TestLevelUpEventOnLineThreshold();

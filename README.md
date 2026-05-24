@@ -16,7 +16,7 @@ score, and a dark pixel UI.
 - DAS/ARR-style hold-to-move input for smoother left and right slides
 - Clockwise and counter-clockwise SRS-style wall kicks for cleaner rotations
 - T-spin scoring plus custom L/J/I/S/Z style-spin clears
-- Faster line-clear flash, combo feedback, level-up feedback, and best score
+- Faster line-clear flash, combo, back-to-back, perfect clear, level-up feedback, and best score
 - Main menu, pause menu, restart, leaderboard view, and game-over overlays
 - Local top-five leaderboard with name entry on qualifying scores
 - In-game tuning for DAS, ARR, clear effect speed, and sound
@@ -56,6 +56,9 @@ name and press Enter, or press Esc to save it under the default player name.
 | Line clear | 100 / 300 / 500 / 800 |
 | T-spin clear | 800 / 1200 / 1600 |
 | Style-spin clear | 400 / 700 / 1000 / 1200 |
+| Combo bonus | +50 for each clear after the first consecutive clear |
+| Back-to-back bonus | +50% of the difficult clear score |
+| Perfect clear bonus | 800 / 1200 / 1800 / 3200 |
 
 Level increases every 10 cleared lines. The drop speed ramps up as the level
 rises. Best score is saved to `tetris_highscore.txt`, and the local top-five
