@@ -4,12 +4,14 @@
 #include "high_score.h"
 #include "leaderboard.h"
 #include "settings.h"
+#include "settings_options.h"
 #include "sound.h"
 
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <string>
 #include <vector>
 
 namespace
@@ -464,6 +466,21 @@ void TestSettingsSanitizeInvalidValues()
     Expect(sanitized.playerName == "BADNAME", "player name setting removes unsupported characters");
 }
 
+void TestSettingsOptionHelpers()
+{
+    TuningPresetValues beginner = GetTuningPresetValues(0);
+    Expect(beginner.dasDelayMs > SettingsDefaultDasDelayMs, "beginner preset uses a slower DAS");
+    Expect(GetTuningPresetValues(2).arrIntervalMs < SettingsDefaultArrIntervalMs,
+           "fast preset uses a faster ARR");
+    Expect(IsTuningPresetCustom(SettingsMaxTuningPreset), "max tuning preset is custom");
+    Expect(std::string(GetTuningPresetName(0)) == "BEGINNER", "beginner preset name is exposed");
+    Expect(std::string(GetControlSchemeName(1)) == "ARROWS", "arrow control scheme name is exposed");
+    Expect(ControlSchemeAllowsArrows(1), "arrow scheme allows arrow keys");
+    Expect(!ControlSchemeAllowsWasd(1), "arrow scheme blocks WASD movement");
+    Expect(!ControlSchemeAllowsArrows(2), "WASD scheme blocks arrow movement");
+    Expect(ControlSchemeAllowsWasd(2), "WASD scheme allows WASD movement");
+}
+
 void TestLeaderboardSortsAndLimitsEntries()
 {
     std::vector<LeaderboardEntry> entries = {
@@ -915,6 +932,7 @@ int main()
     TestSoundCueCallsAreSafe();
     TestSettingsDefaultsAndPersistence();
     TestSettingsSanitizeInvalidValues();
+    TestSettingsOptionHelpers();
     TestLeaderboardSortsAndLimitsEntries();
     TestLeaderboardAddsScoreAndBestScore();
     TestLeaderboardQualificationAndNameNormalization();

@@ -15,6 +15,7 @@ set(TETRIS_CORE_SOURCES
     src/leaderboard.cpp
     src/position.cpp
     src/settings.cpp
+    src/settings_options.cpp
     src/sound.cpp
 )
 

@@ -107,7 +107,7 @@ cmake --build build --config Release
 The game rules are portable and can be tested without the Win32 window:
 
 ```bash
-c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp src/leaderboard.cpp src/position.cpp src/settings.cpp src/sound.cpp -o /tmp/tetris_core_tests
+c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp src/leaderboard.cpp src/position.cpp src/settings.cpp src/settings_options.cpp src/sound.cpp -o /tmp/tetris_core_tests
 /tmp/tetris_core_tests
 ```
 
@@ -129,6 +129,7 @@ src/grid.cpp        Board storage and row clearing
 src/high_score.cpp  Best-score file
 src/leaderboard.cpp Local top-five leaderboard file
 src/settings.cpp    DAS, ARR, effect, and sound settings file
+src/settings_options.cpp  Tuning presets and control scheme helpers
 src/sound.cpp       Tiny Windows beep cues, no-op elsewhere
 tests/core_tests.cpp
 ```

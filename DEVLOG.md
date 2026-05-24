@@ -26,6 +26,22 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Extract settings option helpers
+
+- Changed: Added `src/settings_options.h/.cpp` for tuning preset and control
+  scheme helpers, updated CMake/tests/README to include it, and moved the
+  duplicated helper logic out of `src/main.cpp`.
+- Why: Keep settings labels and preset values testable outside the Win32 UI.
+- Risk: Refactor-only settings helper change; preset and control scheme
+  behavior should remain the same.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp
+  src/settings_options.cpp src/sound.cpp -o /private/tmp/tetris_core_tests`
+  and ran `/private/tmp/tetris_core_tests`; all core tests passed.
+- Follow-ups: Consider moving more Win32-independent UI formatting helpers into
+  portable modules after Windows smoke testing.
+
 ### 2026-05-25 - Deduplicate game runtime state reset
 
 - Changed: Added `Game::InitializeRuntimeState` and routed constructors plus

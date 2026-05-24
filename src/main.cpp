@@ -3,6 +3,7 @@
 #include "high_score.h"
 #include "leaderboard.h"
 #include "settings.h"
+#include "settings_options.h"
 #include "sound.h"
 #include <windows.h>
 #include <string>
@@ -183,31 +184,20 @@ int CycleInt(int value, int minimum, int maximum, int direction)
     return value;
 }
 
-void ApplyTuningPresetValues()
+void ApplySelectedTuningPresetValues()
 {
-    if (tuningPreset == 0)
+    if (!IsTuningPresetCustom(tuningPreset))
     {
-        dasDelayMs = 185;
-        arrIntervalMs = 55;
-        clearFlashDurationMs = 190;
-    }
-    else if (tuningPreset == 1)
-    {
-        dasDelayMs = SettingsDefaultDasDelayMs;
-        arrIntervalMs = SettingsDefaultArrIntervalMs;
-        clearFlashDurationMs = SettingsDefaultClearFlashDurationMs;
-    }
-    else if (tuningPreset == 2)
-    {
-        dasDelayMs = 105;
-        arrIntervalMs = 20;
-        clearFlashDurationMs = 110;
+        TuningPresetValues values = GetTuningPresetValues(tuningPreset);
+        dasDelayMs = values.dasDelayMs;
+        arrIntervalMs = values.arrIntervalMs;
+        clearFlashDurationMs = values.clearFlashDurationMs;
     }
 }
 
 void MarkCustomTuning()
 {
-    tuningPreset = 3;
+    tuningPreset = SettingsMaxTuningPreset;
 }
 
 int GetScaledWindowWidth()
@@ -222,12 +212,12 @@ int GetScaledWindowHeight()
 
 bool AllowArrowControls()
 {
-    return controlScheme != 2;
+    return ControlSchemeAllowsArrows(controlScheme);
 }
 
 bool AllowWasdControls()
 {
-    return controlScheme != 1;
+    return ControlSchemeAllowsWasd(controlScheme);
 }
 
 void ApplyRuntimeSettings(const GameSettings &settings)
@@ -919,36 +909,6 @@ std::string GetSettingLabel(int index)
     }
 }
 
-std::string GetTuningPresetName()
-{
-    if (tuningPreset == 0)
-    {
-        return "BEGINNER";
-    }
-    if (tuningPreset == 1)
-    {
-        return "BALANCED";
-    }
-    if (tuningPreset == 2)
-    {
-        return "FAST";
-    }
-    return "CUSTOM";
-}
-
-std::string GetControlSchemeName()
-{
-    if (controlScheme == 1)
-    {
-        return "ARROWS";
-    }
-    if (controlScheme == 2)
-    {
-        return "WASD";
-    }
-    return "HYBRID";
-}
-
 std::string GetSoundModeName()
 {
     return IsSoundEnabled() ? "ON" : "OFF";
@@ -959,7 +919,7 @@ std::string GetSettingValue(int index)
     switch (index)
     {
     case SettingsTuningPreset:
-        return GetTuningPresetName();
+        return GetTuningPresetName(tuningPreset);
     case SettingsDasDelay:
         return std::to_string(dasDelayMs) + " ms";
     case SettingsArrInterval:
@@ -967,7 +927,7 @@ std::string GetSettingValue(int index)
     case SettingsClearFlash:
         return std::to_string(clearFlashDurationMs) + " ms";
     case SettingsControlScheme:
-        return GetControlSchemeName();
+        return GetControlSchemeName(controlScheme);
     case SettingsWindowScale:
         return std::to_string(windowScalePercent) + "%";
     case SettingsSound:
@@ -1396,7 +1356,7 @@ void AdjustSelectedSetting(HWND hwnd, int direction)
     if (selectedSettingIndex == SettingsTuningPreset)
     {
         tuningPreset = CycleInt(tuningPreset, SettingsMinTuningPreset, SettingsMaxTuningPreset, direction);
-        ApplyTuningPresetValues();
+        ApplySelectedTuningPresetValues();
     }
     else if (selectedSettingIndex == SettingsDasDelay)
     {
