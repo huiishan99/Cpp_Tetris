@@ -7,14 +7,39 @@
 namespace
 {
 bool soundEnabled = true;
+int soundVolumePercent = 100;
+
+int ClampVolume(int value)
+{
+    if (value < 0)
+    {
+        return 0;
+    }
+    if (value > 100)
+    {
+        return 100;
+    }
+    return value;
+}
 
 void PlayTone(int frequency, int durationMs)
 {
+    if (!soundEnabled || soundVolumePercent <= 0)
+    {
+        return;
+    }
+
+    int scaledDurationMs = durationMs * soundVolumePercent / 100;
+    if (scaledDurationMs <= 0)
+    {
+        scaledDurationMs = 1;
+    }
+
 #ifdef _WIN32
-    Beep(frequency, durationMs);
+    Beep(frequency, scaledDurationMs);
 #else
     (void)frequency;
-    (void)durationMs;
+    (void)scaledDurationMs;
 #endif
 }
 }
@@ -22,11 +47,30 @@ void PlayTone(int frequency, int durationMs)
 void SetSoundEnabled(bool enabled)
 {
     soundEnabled = enabled;
+    if (!soundEnabled)
+    {
+        soundVolumePercent = 0;
+    }
+    else if (soundVolumePercent == 0)
+    {
+        soundVolumePercent = 100;
+    }
 }
 
 bool IsSoundEnabled()
 {
     return soundEnabled;
+}
+
+void SetSoundVolumePercent(int volumePercent)
+{
+    soundVolumePercent = ClampVolume(volumePercent);
+    soundEnabled = soundVolumePercent > 0;
+}
+
+int GetSoundVolumePercent()
+{
+    return soundVolumePercent;
 }
 
 void PlayMoveSound()

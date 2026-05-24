@@ -369,6 +369,13 @@ void TestSoundToggleState()
     Expect(!IsSoundEnabled(), "sound can be disabled");
     SetSoundEnabled(true);
     Expect(IsSoundEnabled(), "sound can be re-enabled");
+    SetSoundVolumePercent(50);
+    Expect(IsSoundEnabled(), "non-zero sound volume enables sound");
+    Expect(GetSoundVolumePercent() == 50, "sound volume stores a soft setting");
+    SetSoundVolumePercent(0);
+    Expect(!IsSoundEnabled(), "zero sound volume disables sound");
+    SetSoundVolumePercent(100);
+    Expect(GetSoundVolumePercent() == 100, "sound volume restores full setting");
 }
 
 void TestSoundCueCallsAreSafe()
@@ -398,14 +405,22 @@ void TestSettingsDefaultsAndPersistence()
     Expect(defaults.dasDelayMs == SettingsDefaultDasDelayMs, "missing settings file uses default DAS");
     Expect(defaults.arrIntervalMs == SettingsDefaultArrIntervalMs, "missing settings file uses default ARR");
     Expect(defaults.clearFlashDurationMs == SettingsDefaultClearFlashDurationMs, "missing settings file uses default clear flash");
+    Expect(defaults.tuningPreset == SettingsDefaultTuningPreset, "missing settings file uses default tuning preset");
+    Expect(defaults.controlScheme == SettingsDefaultControlScheme, "missing settings file uses default control scheme");
+    Expect(defaults.windowScalePercent == SettingsDefaultWindowScalePercent, "missing settings file uses default window scale");
     Expect(defaults.soundEnabled, "missing settings file enables sound by default");
+    Expect(defaults.soundVolumePercent == SettingsDefaultSoundVolumePercent, "missing settings file uses default sound volume");
     Expect(defaults.playerName == DefaultLeaderboardName, "missing settings file uses default player name");
 
     GameSettings settings{
         120,
         25,
         110,
+        2,
+        1,
+        125,
         false,
+        0,
         "neo7",
     };
     Expect(SaveSettings(path, settings), "settings file saves successfully");
@@ -414,7 +429,11 @@ void TestSettingsDefaultsAndPersistence()
     Expect(loaded.dasDelayMs == 120, "saved DAS loads successfully");
     Expect(loaded.arrIntervalMs == 25, "saved ARR loads successfully");
     Expect(loaded.clearFlashDurationMs == 110, "saved clear flash loads successfully");
+    Expect(loaded.tuningPreset == 2, "saved tuning preset loads successfully");
+    Expect(loaded.controlScheme == 1, "saved control scheme loads successfully");
+    Expect(loaded.windowScalePercent == 125, "saved window scale loads successfully");
     Expect(!loaded.soundEnabled, "saved sound flag loads successfully");
+    Expect(loaded.soundVolumePercent == 0, "disabled sound stores zero volume");
     Expect(loaded.playerName == "NEO7", "saved player name loads normalized");
 
     std::remove(path);
@@ -426,7 +445,11 @@ void TestSettingsSanitizeInvalidValues()
         -10,
         999,
         20,
+        99,
+        -9,
+        999,
         true,
+        999,
         "bad-name!!!",
     };
 
@@ -434,6 +457,10 @@ void TestSettingsSanitizeInvalidValues()
     Expect(sanitized.dasDelayMs == SettingsMinDasDelayMs, "DAS setting clamps to minimum");
     Expect(sanitized.arrIntervalMs == SettingsMaxArrIntervalMs, "ARR setting clamps to maximum");
     Expect(sanitized.clearFlashDurationMs == SettingsMinClearFlashDurationMs, "clear flash setting clamps to minimum");
+    Expect(sanitized.tuningPreset == SettingsMaxTuningPreset, "tuning preset clamps to maximum");
+    Expect(sanitized.controlScheme == SettingsMinControlScheme, "control scheme clamps to minimum");
+    Expect(sanitized.windowScalePercent == SettingsMaxWindowScalePercent, "window scale clamps to maximum");
+    Expect(sanitized.soundVolumePercent == SettingsMaxSoundVolumePercent, "sound volume clamps to maximum");
     Expect(sanitized.playerName == "BADNAME", "player name setting removes unsupported characters");
 }
 

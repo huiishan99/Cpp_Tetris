@@ -11,3 +11,5 @@ void PlayPauseSound();
 void PlayGameOverSound();
 void SetSoundEnabled(bool enabled);
 bool IsSoundEnabled();
+void SetSoundVolumePercent(int volumePercent);
+int GetSoundVolumePercent();

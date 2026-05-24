@@ -39,7 +39,11 @@ GameSettings GetDefaultSettings()
         SettingsDefaultDasDelayMs,
         SettingsDefaultArrIntervalMs,
         SettingsDefaultClearFlashDurationMs,
+        SettingsDefaultTuningPreset,
+        SettingsDefaultControlScheme,
+        SettingsDefaultWindowScalePercent,
         true,
+        SettingsDefaultSoundVolumePercent,
         DefaultLeaderboardName,
     };
 }
@@ -52,6 +56,22 @@ GameSettings SanitizeSettings(const GameSettings &settings)
     sanitized.clearFlashDurationMs = Clamp(sanitized.clearFlashDurationMs,
                                            SettingsMinClearFlashDurationMs,
                                            SettingsMaxClearFlashDurationMs);
+    sanitized.tuningPreset = Clamp(sanitized.tuningPreset, SettingsMinTuningPreset, SettingsMaxTuningPreset);
+    sanitized.controlScheme = Clamp(sanitized.controlScheme, SettingsMinControlScheme, SettingsMaxControlScheme);
+    sanitized.windowScalePercent = Clamp(sanitized.windowScalePercent,
+                                         SettingsMinWindowScalePercent,
+                                         SettingsMaxWindowScalePercent);
+    sanitized.soundVolumePercent = Clamp(sanitized.soundVolumePercent,
+                                         SettingsMinSoundVolumePercent,
+                                         SettingsMaxSoundVolumePercent);
+    if (!sanitized.soundEnabled)
+    {
+        sanitized.soundVolumePercent = 0;
+    }
+    else if (sanitized.soundVolumePercent == 0)
+    {
+        sanitized.soundEnabled = false;
+    }
     sanitized.playerName = NormalizeLeaderboardName(sanitized.playerName);
     return sanitized;
 }
@@ -100,9 +120,25 @@ GameSettings LoadSettings(const std::string &path)
         {
             settings.clearFlashDurationMs = value;
         }
+        else if (key == "tuning_preset")
+        {
+            settings.tuningPreset = value;
+        }
+        else if (key == "control_scheme")
+        {
+            settings.controlScheme = value;
+        }
+        else if (key == "window_scale_percent")
+        {
+            settings.windowScalePercent = value;
+        }
         else if (key == "sound_enabled")
         {
             settings.soundEnabled = value != 0;
+        }
+        else if (key == "sound_volume_percent")
+        {
+            settings.soundVolumePercent = value;
         }
     }
 
@@ -121,7 +157,11 @@ bool SaveSettings(const std::string &path, const GameSettings &settings)
     file << "das_delay_ms=" << sanitized.dasDelayMs << '\n';
     file << "arr_interval_ms=" << sanitized.arrIntervalMs << '\n';
     file << "clear_flash_ms=" << sanitized.clearFlashDurationMs << '\n';
+    file << "tuning_preset=" << sanitized.tuningPreset << '\n';
+    file << "control_scheme=" << sanitized.controlScheme << '\n';
+    file << "window_scale_percent=" << sanitized.windowScalePercent << '\n';
     file << "sound_enabled=" << (sanitized.soundEnabled ? 1 : 0) << '\n';
+    file << "sound_volume_percent=" << sanitized.soundVolumePercent << '\n';
     file << "player_name=" << sanitized.playerName << '\n';
     return static_cast<bool>(file);
 }

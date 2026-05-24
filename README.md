@@ -19,7 +19,7 @@ score, and a dark pixel UI.
 - Faster line-clear flash, combo, back-to-back, perfect clear, level-up feedback, and best score
 - Main menu, pause menu, restart, leaderboard view, and game-over overlays
 - Local top-five leaderboard with name entry on qualifying scores
-- In-game tuning for DAS, ARR, clear effect speed, and sound
+- In-game tuning presets for DAS, ARR, clear effect speed, controls, window scale, and sound
 - Pixel-style font with compact Win32 rendering
 - Layered sound cues for moves, drops, hold, rotate, clears, spins, level-up, pause, and game over
 
@@ -41,9 +41,12 @@ score, and a dark pixel UI.
 | R | Restart |
 | Q | Quit |
 
-Inside settings, use Up / Down to choose a row, Left / Right to adjust numeric
-values, Enter to edit `NAME`, and Esc or F1 to close the panel. Settings are
-saved to `tetris_settings.txt`.
+Inside settings, use Up / Down to choose a row, Left / Right to adjust values,
+Enter to edit `NAME`, and Esc or F1 to close the panel. `PRESET` switches
+between beginner, balanced, fast, and custom handling; `CONTROL` can limit
+movement to hybrid, arrows, or WASD; `WINDOW` scales the fixed pixel canvas;
+`VOLUME` adjusts the beep cue length. Settings are saved to
+`tetris_settings.txt`.
 When a game-over score reaches the local leaderboard, type a 3-12 character
 name and press Enter, or press Esc to save it under the default player name.
 

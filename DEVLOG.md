@@ -26,6 +26,25 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Upgrade gameplay settings
+
+- Changed: Added persisted tuning preset, control scheme, window scale, and
+  sound volume settings. The settings overlay now includes preset, control,
+  window, and expanded sound rows; the Win32 renderer scales the fixed canvas
+  to the selected window size. Updated README and core tests.
+- Why: Make Windows hand-tuning faster and give players practical presets
+  instead of only raw DAS/ARR numbers.
+- Risk: Settings file schema expanded and Win32 paint now uses `StretchBlt` for
+  scaled windows. Existing settings still load through defaults for missing
+  keys, but window scaling needs Windows visual testing.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp src/sound.cpp -o
+  /private/tmp/tetris_core_tests` and ran `/private/tmp/tetris_core_tests`;
+  all core tests passed.
+- Follow-ups: Add full per-action key rebinding later if the control presets
+  are not enough.
+
 ### 2026-05-25 - Add combo, B2B, and perfect clear feedback
 
 - Changed: Added combo score bonuses, back-to-back difficult-clear tracking,

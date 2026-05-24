@@ -10,11 +10,15 @@
 
 enum SettingsOption
 {
-    SettingsDasDelay = 0,
+    SettingsTuningPreset = 0,
+    SettingsDasDelay,
     SettingsArrInterval,
     SettingsClearFlash,
-    SettingsPlayerName,
+    SettingsControlScheme,
+    SettingsWindowScale,
     SettingsSound,
+    SettingsSoundVolume,
+    SettingsPlayerName,
     SettingsOptionCount
 };
 
@@ -48,6 +52,10 @@ DWORD lockDelayStartedAt = 0;
 int clearFlashDurationMs = SettingsDefaultClearFlashDurationMs;
 int dasDelayMs = SettingsDefaultDasDelayMs;
 int arrIntervalMs = SettingsDefaultArrIntervalMs;
+int tuningPreset = SettingsDefaultTuningPreset;
+int controlScheme = SettingsDefaultControlScheme;
+int windowScalePercent = SettingsDefaultWindowScalePercent;
+int soundVolumePercent = SettingsDefaultSoundVolumePercent;
 int selectedSettingIndex = 0;
 int selectedMainMenuIndex = MainMenuStart;
 int selectedPauseMenuIndex = PauseMenuContinue;
@@ -162,14 +170,79 @@ int ClampInt(int value, int minimum, int maximum)
     return value;
 }
 
+int CycleInt(int value, int minimum, int maximum, int direction)
+{
+    if (direction > 0)
+    {
+        return value >= maximum ? minimum : value + 1;
+    }
+    if (direction < 0)
+    {
+        return value <= minimum ? maximum : value - 1;
+    }
+    return value;
+}
+
+void ApplyTuningPresetValues()
+{
+    if (tuningPreset == 0)
+    {
+        dasDelayMs = 185;
+        arrIntervalMs = 55;
+        clearFlashDurationMs = 190;
+    }
+    else if (tuningPreset == 1)
+    {
+        dasDelayMs = SettingsDefaultDasDelayMs;
+        arrIntervalMs = SettingsDefaultArrIntervalMs;
+        clearFlashDurationMs = SettingsDefaultClearFlashDurationMs;
+    }
+    else if (tuningPreset == 2)
+    {
+        dasDelayMs = 105;
+        arrIntervalMs = 20;
+        clearFlashDurationMs = 110;
+    }
+}
+
+void MarkCustomTuning()
+{
+    tuningPreset = 3;
+}
+
+int GetScaledWindowWidth()
+{
+    return AppConfig::WindowWidth * windowScalePercent / 100;
+}
+
+int GetScaledWindowHeight()
+{
+    return AppConfig::WindowHeight * windowScalePercent / 100;
+}
+
+bool AllowArrowControls()
+{
+    return controlScheme != 2;
+}
+
+bool AllowWasdControls()
+{
+    return controlScheme != 1;
+}
+
 void ApplyRuntimeSettings(const GameSettings &settings)
 {
     GameSettings sanitized = SanitizeSettings(settings);
+    tuningPreset = sanitized.tuningPreset;
     dasDelayMs = sanitized.dasDelayMs;
     arrIntervalMs = sanitized.arrIntervalMs;
     clearFlashDurationMs = sanitized.clearFlashDurationMs;
+    controlScheme = sanitized.controlScheme;
+    windowScalePercent = sanitized.windowScalePercent;
     defaultPlayerName = NormalizeLeaderboardName(sanitized.playerName);
     SetSoundEnabled(sanitized.soundEnabled);
+    SetSoundVolumePercent(sanitized.soundVolumePercent);
+    soundVolumePercent = GetSoundVolumePercent();
 }
 
 GameSettings CollectRuntimeSettings()
@@ -178,7 +251,11 @@ GameSettings CollectRuntimeSettings()
         dasDelayMs,
         arrIntervalMs,
         clearFlashDurationMs,
+        tuningPreset,
+        controlScheme,
+        windowScalePercent,
         IsSoundEnabled(),
+        GetSoundVolumePercent(),
         defaultPlayerName,
     });
 }
@@ -819,35 +896,86 @@ std::string GetSettingLabel(int index)
 {
     switch (index)
     {
+    case SettingsTuningPreset:
+        return "PRESET";
     case SettingsDasDelay:
         return "DAS";
     case SettingsArrInterval:
         return "ARR";
     case SettingsClearFlash:
         return "CLEAR FX";
-    case SettingsPlayerName:
-        return "NAME";
+    case SettingsControlScheme:
+        return "CONTROL";
+    case SettingsWindowScale:
+        return "WINDOW";
     case SettingsSound:
         return "SOUND";
+    case SettingsSoundVolume:
+        return "VOLUME";
+    case SettingsPlayerName:
+        return "NAME";
     default:
         return "";
     }
+}
+
+std::string GetTuningPresetName()
+{
+    if (tuningPreset == 0)
+    {
+        return "BEGINNER";
+    }
+    if (tuningPreset == 1)
+    {
+        return "BALANCED";
+    }
+    if (tuningPreset == 2)
+    {
+        return "FAST";
+    }
+    return "CUSTOM";
+}
+
+std::string GetControlSchemeName()
+{
+    if (controlScheme == 1)
+    {
+        return "ARROWS";
+    }
+    if (controlScheme == 2)
+    {
+        return "WASD";
+    }
+    return "HYBRID";
+}
+
+std::string GetSoundModeName()
+{
+    return IsSoundEnabled() ? "ON" : "OFF";
 }
 
 std::string GetSettingValue(int index)
 {
     switch (index)
     {
+    case SettingsTuningPreset:
+        return GetTuningPresetName();
     case SettingsDasDelay:
         return std::to_string(dasDelayMs) + " ms";
     case SettingsArrInterval:
         return std::to_string(arrIntervalMs) + " ms";
     case SettingsClearFlash:
         return std::to_string(clearFlashDurationMs) + " ms";
+    case SettingsControlScheme:
+        return GetControlSchemeName();
+    case SettingsWindowScale:
+        return std::to_string(windowScalePercent) + "%";
+    case SettingsSound:
+        return GetSoundModeName();
+    case SettingsSoundVolume:
+        return std::to_string(GetSoundVolumePercent()) + "%";
     case SettingsPlayerName:
         return settingsNameEditActive ? settingsNameDraft + "_" : defaultPlayerName;
-    case SettingsSound:
-        return IsSoundEnabled() ? "ON" : "OFF";
     default:
         return "";
     }
@@ -869,52 +997,62 @@ void DrawSettingMeter(HDC hdc, int left, int top, int width, int value, int mini
 
 void DrawSettingsRow(HDC hdc, int index, int top)
 {
-    const int left = AppConfig::BoardLeft + 58;
-    const int right = AppConfig::WindowWidth - 58;
+    const int left = AppConfig::BoardLeft + 42;
+    const int right = AppConfig::WindowWidth - 42;
     bool selected = selectedSettingIndex == index;
     COLORREF accent = selected ? RGB(123, 205, 236) : RGB(86, 98, 88);
     COLORREF fill = selected ? RGB(39, 48, 49) : RGB(29, 34, 34);
     COLORREF labelColor = selected ? RGB(248, 244, 225) : RGB(178, 187, 168);
     COLORREF valueColor = selected ? RGB(123, 205, 236) : RGB(248, 244, 225);
 
-    FillRoundRectColor(hdc, left, top, right, top + 48, 8, fill, accent);
-    DrawTextLine(hdc, left + 18, top + 12, GetSettingLabel(index), 20, labelColor, FW_BOLD);
+    FillRoundRectColor(hdc, left, top, right, top + 44, 8, fill, accent);
+    DrawTextLine(hdc, left + 16, top + 11, GetSettingLabel(index), 18, labelColor, FW_BOLD);
     if (index != SettingsPlayerName)
     {
-        DrawTextLine(hdc, right - 122, top + 12, GetSettingValue(index), 20, valueColor, FW_BOLD);
+        DrawTextLine(hdc, right - 134, top + 11, GetSettingValue(index), 18, valueColor, FW_BOLD);
     }
 
     if (index == SettingsDasDelay)
     {
-        DrawSettingMeter(hdc, left + 160, top + 31, 160, dasDelayMs,
+        DrawSettingMeter(hdc, left + 156, top + 30, 150, dasDelayMs,
                          SettingsMinDasDelayMs, SettingsMaxDasDelayMs, accent);
     }
     else if (index == SettingsArrInterval)
     {
-        DrawSettingMeter(hdc, left + 160, top + 31, 160, arrIntervalMs,
+        DrawSettingMeter(hdc, left + 156, top + 30, 150, arrIntervalMs,
                          SettingsMinArrIntervalMs, SettingsMaxArrIntervalMs, accent);
     }
     else if (index == SettingsClearFlash)
     {
-        DrawSettingMeter(hdc, left + 160, top + 31, 160, clearFlashDurationMs,
+        DrawSettingMeter(hdc, left + 156, top + 30, 150, clearFlashDurationMs,
                          SettingsMinClearFlashDurationMs, SettingsMaxClearFlashDurationMs, accent);
+    }
+    else if (index == SettingsWindowScale)
+    {
+        DrawSettingMeter(hdc, left + 156, top + 30, 150, windowScalePercent,
+                         SettingsMinWindowScalePercent, SettingsMaxWindowScalePercent, accent);
+    }
+    else if (index == SettingsSoundVolume)
+    {
+        DrawSettingMeter(hdc, left + 156, top + 30, 150, GetSoundVolumePercent(),
+                         SettingsMinSoundVolumePercent, SettingsMaxSoundVolumePercent, accent);
     }
     else if (index == SettingsPlayerName)
     {
-        int inputLeft = left + 160;
+        int inputLeft = left + 156;
         COLORREF inputBorder = settingsNameEditActive ? RGB(123, 205, 236) : RGB(86, 98, 88);
-        FillRoundRectColor(hdc, inputLeft, top + 10, inputLeft + 170, top + 38, 8,
+        FillRoundRectColor(hdc, inputLeft, top + 9, inputLeft + 170, top + 35, 8,
                            RGB(18, 22, 22), inputBorder);
-        DrawTextLine(hdc, inputLeft + 12, top + 13, GetSettingValue(index), 18, valueColor, FW_BOLD);
+        DrawTextLine(hdc, inputLeft + 12, top + 12, GetSettingValue(index), 16, valueColor, FW_BOLD);
     }
-    else
+    else if (index == SettingsSound)
     {
-        int switchLeft = left + 160;
+        int switchLeft = left + 156;
         COLORREF switchColor = IsSoundEnabled() ? RGB(122, 214, 176) : RGB(119, 124, 116);
-        FillRoundRectColor(hdc, switchLeft, top + 20, switchLeft + 82, top + 34, 8,
+        FillRoundRectColor(hdc, switchLeft, top + 19, switchLeft + 82, top + 33, 8,
                            switchColor, AdjustColor(switchColor, -55));
         int knobLeft = IsSoundEnabled() ? switchLeft + 56 : switchLeft + 6;
-        FillRoundRectColor(hdc, knobLeft, top + 18, knobLeft + 22, top + 36, 9,
+        FillRoundRectColor(hdc, knobLeft, top + 17, knobLeft + 22, top + 35, 9,
                            RGB(248, 244, 225), RGB(210, 204, 184));
     }
 }
@@ -928,8 +1066,8 @@ void DrawSettingsOverlay(HDC hdc)
 
     const int left = AppConfig::BoardLeft + 34;
     const int right = AppConfig::WindowWidth - 34;
-    const int top = AppConfig::BoardTop + 104;
-    const int bottom = AppConfig::BoardTop + 500;
+    const int top = AppConfig::BoardTop + 42;
+    const int bottom = AppConfig::BoardTop + 592;
 
     FillRoundRectColor(hdc, left + 6, top + 8, right + 6, bottom + 8, 12,
                        RGB(9, 11, 11), RGB(9, 11, 11));
@@ -937,12 +1075,12 @@ void DrawSettingsOverlay(HDC hdc)
                        RGB(25, 31, 32), RGB(65, 129, 146));
     FillRectColor(hdc, left + 22, top + 18, right - 22, top + 22, RGB(123, 205, 236));
 
-    DrawTextCentered(hdc, left, right, top + 42, "SETTINGS", 34,
+    DrawTextCentered(hdc, left, right, top + 36, "SETTINGS", 30,
                      RGB(248, 244, 225), FW_BOLD);
 
     for (int index = 0; index < SettingsOptionCount; index++)
     {
-        DrawSettingsRow(hdc, index, top + 92 + index * 56);
+        DrawSettingsRow(hdc, index, top + 78 + index * 50);
     }
 }
 
@@ -1080,16 +1218,17 @@ void FinishLockDelay(HWND hwnd)
 
 bool IsHorizontalMoveKey(WPARAM key)
 {
-    return key == VK_LEFT || key == VK_RIGHT || key == 'A' || key == 'D';
+    return (AllowArrowControls() && (key == VK_LEFT || key == VK_RIGHT)) ||
+           (AllowWasdControls() && (key == 'A' || key == 'D'));
 }
 
 int GetHorizontalDirection(WPARAM key)
 {
-    if (key == VK_LEFT || key == 'A')
+    if ((AllowArrowControls() && key == VK_LEFT) || (AllowWasdControls() && key == 'A'))
     {
         return -1;
     }
-    if (key == VK_RIGHT || key == 'D')
+    if ((AllowArrowControls() && key == VK_RIGHT) || (AllowWasdControls() && key == 'D'))
     {
         return 1;
     }
@@ -1161,6 +1300,17 @@ void StartDropTimer(HWND hwnd)
 {
     KillTimer(hwnd, AppConfig::DropTimerId);
     SetTimer(hwnd, AppConfig::DropTimerId, game.GetDropIntervalMs(), nullptr);
+}
+
+void ApplyWindowScale(HWND hwnd)
+{
+    RECT windowRect = {0, 0, GetScaledWindowWidth(), GetScaledWindowHeight()};
+    AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
+    SetWindowPos(hwnd, nullptr, 0, 0,
+                 windowRect.right - windowRect.left,
+                 windowRect.bottom - windowRect.top,
+                 SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    InvalidateRect(hwnd, nullptr, FALSE);
 }
 
 void StartGameFromMenu(HWND hwnd)
@@ -1241,24 +1391,62 @@ void ToggleSettings(HWND hwnd)
     InvalidateRect(hwnd, nullptr, FALSE);
 }
 
-void AdjustSelectedSetting(int direction)
+void AdjustSelectedSetting(HWND hwnd, int direction)
 {
-    if (selectedSettingIndex == SettingsDasDelay)
+    if (selectedSettingIndex == SettingsTuningPreset)
+    {
+        tuningPreset = CycleInt(tuningPreset, SettingsMinTuningPreset, SettingsMaxTuningPreset, direction);
+        ApplyTuningPresetValues();
+    }
+    else if (selectedSettingIndex == SettingsDasDelay)
     {
         dasDelayMs = ClampInt(dasDelayMs + direction * 10, SettingsMinDasDelayMs, SettingsMaxDasDelayMs);
+        MarkCustomTuning();
     }
     else if (selectedSettingIndex == SettingsArrInterval)
     {
         arrIntervalMs = ClampInt(arrIntervalMs + direction * 5, SettingsMinArrIntervalMs, SettingsMaxArrIntervalMs);
+        MarkCustomTuning();
     }
     else if (selectedSettingIndex == SettingsClearFlash)
     {
         clearFlashDurationMs = ClampInt(clearFlashDurationMs + direction * 10,
                                         SettingsMinClearFlashDurationMs, SettingsMaxClearFlashDurationMs);
+        MarkCustomTuning();
+    }
+    else if (selectedSettingIndex == SettingsControlScheme)
+    {
+        controlScheme = CycleInt(controlScheme, SettingsMinControlScheme, SettingsMaxControlScheme, direction);
+        ResetHorizontalInput(hwnd);
+    }
+    else if (selectedSettingIndex == SettingsWindowScale)
+    {
+        windowScalePercent = ClampInt(windowScalePercent + direction * 25,
+                                      SettingsMinWindowScalePercent,
+                                      SettingsMaxWindowScalePercent);
+        ApplyWindowScale(hwnd);
     }
     else if (selectedSettingIndex == SettingsSound)
     {
-        SetSoundEnabled(!IsSoundEnabled());
+        if (IsSoundEnabled())
+        {
+            SetSoundEnabled(false);
+            soundVolumePercent = GetSoundVolumePercent();
+        }
+        else
+        {
+            SetSoundEnabled(true);
+            SetSoundVolumePercent(soundVolumePercent <= 0 ? SettingsDefaultSoundVolumePercent : soundVolumePercent);
+            soundVolumePercent = GetSoundVolumePercent();
+        }
+    }
+    else if (selectedSettingIndex == SettingsSoundVolume)
+    {
+        int volume = ClampInt(GetSoundVolumePercent() + direction * 10,
+                              SettingsMinSoundVolumePercent,
+                              SettingsMaxSoundVolumePercent);
+        SetSoundVolumePercent(volume);
+        soundVolumePercent = GetSoundVolumePercent();
     }
 }
 
@@ -1339,10 +1527,10 @@ void HandleSettingsKey(HWND hwnd, WPARAM key)
         selectedSettingIndex = (selectedSettingIndex + 1) % SettingsOptionCount;
         break;
     case VK_LEFT:
-        AdjustSelectedSetting(-1);
+        AdjustSelectedSetting(hwnd, -1);
         break;
     case VK_RIGHT:
-        AdjustSelectedSetting(1);
+        AdjustSelectedSetting(hwnd, 1);
         break;
     case VK_RETURN:
     case VK_SPACE:
@@ -1352,7 +1540,13 @@ void HandleSettingsKey(HWND hwnd, WPARAM key)
         }
         else if (selectedSettingIndex == SettingsSound)
         {
-            AdjustSelectedSetting(1);
+            AdjustSelectedSetting(hwnd, 1);
+        }
+        else if (selectedSettingIndex == SettingsTuningPreset ||
+                 selectedSettingIndex == SettingsControlScheme ||
+                 selectedSettingIndex == SettingsWindowScale)
+        {
+            AdjustSelectedSetting(hwnd, 1);
         }
         break;
     default:
@@ -1744,16 +1938,16 @@ void HandleGameKey(HWND hwnd, WPARAM key)
     switch (key)
     {
     case VK_LEFT:
-        input = 'a';
+        input = AllowArrowControls() ? 'a' : 0;
         break;
     case VK_RIGHT:
-        input = 'd';
+        input = AllowArrowControls() ? 'd' : 0;
         break;
     case VK_DOWN:
-        input = 's';
+        input = AllowArrowControls() ? 's' : 0;
         break;
     case VK_UP:
-        input = 'w';
+        input = AllowArrowControls() ? 'w' : 0;
         break;
     case VK_SPACE:
         input = ' ';
@@ -1765,10 +1959,20 @@ void HandleGameKey(HWND hwnd, WPARAM key)
         input = (game.IsStarted() && !game.IsGameOver()) ? 'p' : 0;
         break;
     case 'C':
+        input = static_cast<int>(key);
+        break;
     case 'A':
+        input = AllowWasdControls() ? static_cast<int>(key) : 0;
+        break;
     case 'D':
+        input = AllowWasdControls() ? static_cast<int>(key) : 0;
+        break;
     case 'S':
+        input = AllowWasdControls() ? static_cast<int>(key) : 0;
+        break;
     case 'W':
+        input = AllowWasdControls() ? static_cast<int>(key) : 0;
+        break;
     case 'X':
     case 'Z':
     case 'P':
@@ -1915,9 +2119,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         HDC memoryDc = CreateCompatibleDC(hdc);
         HBITMAP bitmap = CreateCompatibleBitmap(hdc, AppConfig::WindowWidth, AppConfig::WindowHeight);
         HBITMAP oldBitmap = static_cast<HBITMAP>(SelectObject(memoryDc, bitmap));
+        RECT clientRect = {};
+        GetClientRect(hwnd, &clientRect);
 
         DrawGame(memoryDc);
-        BitBlt(hdc, 0, 0, AppConfig::WindowWidth, AppConfig::WindowHeight, memoryDc, 0, 0, SRCCOPY);
+        SetStretchBltMode(hdc, COLORONCOLOR);
+        StretchBlt(hdc, 0, 0, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top,
+                   memoryDc, 0, 0, AppConfig::WindowWidth, AppConfig::WindowHeight, SRCCOPY);
 
         SelectObject(memoryDc, oldBitmap);
         DeleteObject(bitmap);
@@ -1963,7 +2171,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int showCommand)
 
     RegisterClassA(&windowClass);
 
-    RECT windowRect = {0, 0, AppConfig::WindowWidth, AppConfig::WindowHeight};
+    RECT windowRect = {0, 0, GetScaledWindowWidth(), GetScaledWindowHeight()};
     AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
     HWND hwnd = CreateWindowExA(0, className, "Tetris - By HuiShan",
