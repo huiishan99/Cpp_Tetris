@@ -26,6 +26,22 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Polish menu keyboard handling
+
+- Changed: Let `Q` quit from the main and pause menus, and clear held
+  horizontal movement state when entering pause, game over, or a non-started
+  menu state.
+- Why: Keep the README `Q` shortcut consistent across menus and prevent a held
+  left/right key from leaking through after pause or game-over transitions.
+- Risk: Small Win32 input-routing change; portable gameplay rules are
+  unchanged.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp src/sound.cpp -o
+  /private/tmp/tetris_core_tests` and ran `/private/tmp/tetris_core_tests`;
+  all core tests passed. Win32 key flow still needs a Windows smoke test.
+- Follow-ups: Verify Q, pause, resume, and held-left/right behavior on Windows.
+
 ### 2026-05-25 - Add main and pause menus
 
 - Changed: Replaced the old ready/pause prompts with selectable main and pause

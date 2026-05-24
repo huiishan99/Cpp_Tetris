@@ -1404,6 +1404,7 @@ void HandleMainMenuKey(HWND hwnd, WPARAM key)
         ActivateMainMenuSelection(hwnd);
         return;
     case VK_ESCAPE:
+    case 'Q':
         PostQuitMessage(0);
         return;
     default:
@@ -1435,6 +1436,9 @@ void HandlePauseMenuKey(HWND hwnd, WPARAM key)
         return;
     case 'R':
         RestartGameFromMenu(hwnd);
+        return;
+    case 'Q':
+        PostQuitMessage(0);
         return;
     default:
         break;
@@ -1758,6 +1762,10 @@ void HandleGameKey(HWND hwnd, WPARAM key)
     if (input != 0)
     {
         ApplyGameInput(hwnd, input);
+        if (game.IsPaused() || game.IsGameOver() || !game.IsStarted())
+        {
+            ResetHorizontalInput(hwnd);
+        }
     }
 }
 
