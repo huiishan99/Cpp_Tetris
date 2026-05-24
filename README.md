@@ -73,7 +73,8 @@ To make a shareable build:
 .\package.bat
 ```
 
-That creates `dist\tetris-win.zip` with the executable, bundled font, README,
+That creates `dist\tetris-win-<version>.zip` and
+`dist\tetris-win-latest.zip` with the executable, bundled font, docs, README,
 and runtime DLLs beside the executable. You only need to rebuild or repackage
 after changing the source.
 

@@ -26,6 +26,24 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Improve release packaging
+
+- Changed: Added `VERSION`, release and Windows playtest checklists under
+  `docs/`, and upgraded `package.bat` to create versioned release folders and
+  zips, a `tetris-win-latest.zip` copy, package release notes, and SHA256
+  output when `certutil` is available. Updated README packaging instructions.
+- Why: Make the project easier to share as a downloadable Windows game instead
+  of a loose executable build.
+- Risk: The packaging script targets Windows batch/PowerShell and cannot be
+  executed in this macOS environment.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp src/sound.cpp -o
+  /private/tmp/tetris_core_tests` and ran `/private/tmp/tetris_core_tests`;
+  all core tests passed. Windows packaging still needs to be run on Windows.
+- Follow-ups: Run `package.bat` on Windows and verify the generated zip,
+  latest copy, and checksum file.
+
 ### 2026-05-24 - Add default player name setting
 
 - Changed: Added `player_name` to the persisted settings file, normalized
