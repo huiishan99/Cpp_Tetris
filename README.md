@@ -115,6 +115,7 @@ ctest --test-dir build
 ## Project Map
 
 ```text
+src/app_config.h   Window size, file names, timer IDs, font names
 src/main.cpp        Win32 window, drawing, input, timers
 src/game.cpp        Game rules, scoring, hold, spin detection
 src/grid.cpp        Board storage and row clearing

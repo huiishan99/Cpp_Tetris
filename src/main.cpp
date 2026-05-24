@@ -1,3 +1,4 @@
+#include "app_config.h"
 #include "game.h"
 #include "high_score.h"
 #include "leaderboard.h"
@@ -6,25 +7,6 @@
 #include <windows.h>
 #include <string>
 #include <vector>
-
-const int WINDOW_WIDTH = 600;
-const int WINDOW_HEIGHT = 700;
-const int BOARD_LEFT = 32;
-const int BOARD_TOP = 64;
-const int CELL_SIZE = 28;
-const int TIMER_ID = 1;
-const int FLASH_TIMER_ID = 2;
-const int LEVEL_TIMER_ID = 3;
-const int LOCK_TIMER_ID = 4;
-const int INPUT_TIMER_ID = 5;
-const int LEVEL_FLASH_DURATION_MS = 900;
-const int LOCK_DELAY_MS = 420;
-const char *HIGH_SCORE_FILE = "tetris_highscore.txt";
-const char *LEADERBOARD_FILE = "tetris_leaderboard.txt";
-const char *SETTINGS_FILE = "tetris_settings.txt";
-const char *PIXEL_FONT_FILE = "Font\\monogram.ttf";
-const char *PIXEL_FONT_NAME = "monogram";
-const char *FALLBACK_FONT_NAME = "Segoe UI";
 
 enum SettingsOption
 {
@@ -67,7 +49,7 @@ std::string leaderboardNameInput;
 
 const char *GetGameFontName()
 {
-    return pixelFontLoaded ? PIXEL_FONT_NAME : FALLBACK_FONT_NAME;
+    return pixelFontLoaded ? AppConfig::PixelFontName : AppConfig::FallbackFontName;
 }
 
 DWORD GetGameFontQuality()
@@ -77,14 +59,14 @@ DWORD GetGameFontQuality()
 
 void LoadGameFont()
 {
-    pixelFontLoaded = AddFontResourceExA(PIXEL_FONT_FILE, FR_PRIVATE, nullptr) > 0;
+    pixelFontLoaded = AddFontResourceExA(AppConfig::PixelFontFile, FR_PRIVATE, nullptr) > 0;
 }
 
 void UnloadGameFont()
 {
     if (pixelFontLoaded)
     {
-        RemoveFontResourceExA(PIXEL_FONT_FILE, FR_PRIVATE, nullptr);
+        RemoveFontResourceExA(AppConfig::PixelFontFile, FR_PRIVATE, nullptr);
         pixelFontLoaded = false;
     }
 }
@@ -223,8 +205,8 @@ void SubmitLeaderboardName(const std::string &name)
     {
         game.SetHighScore(bestScore);
     }
-    SaveLeaderboard(LEADERBOARD_FILE, leaderboard);
-    SaveHighScore(HIGH_SCORE_FILE, game.GetHighScore());
+    SaveLeaderboard(AppConfig::LeaderboardFile, leaderboard);
+    SaveHighScore(AppConfig::HighScoreFile, game.GetHighScore());
 
     leaderboardNameEntryActive = false;
     leaderboardNameInput.clear();
@@ -320,21 +302,21 @@ void DrawCellAt(HDC hdc, int left, int top, int size, int blockId)
 
 void DrawCell(HDC hdc, int row, int column, int blockId)
 {
-    int left = BOARD_LEFT + column * CELL_SIZE;
-    int top = BOARD_TOP + row * CELL_SIZE;
-    DrawCellAt(hdc, left, top, CELL_SIZE, blockId);
+    int left = AppConfig::BoardLeft + column * AppConfig::CellSize;
+    int top = AppConfig::BoardTop + row * AppConfig::CellSize;
+    DrawCellAt(hdc, left, top, AppConfig::CellSize, blockId);
 }
 
 void DrawGhostCell(HDC hdc, int row, int column, int blockId)
 {
-    int left = BOARD_LEFT + column * CELL_SIZE;
-    int top = BOARD_TOP + row * CELL_SIZE;
+    int left = AppConfig::BoardLeft + column * AppConfig::CellSize;
+    int top = AppConfig::BoardTop + row * AppConfig::CellSize;
     COLORREF color = GetBlockColor(blockId);
     HPEN pen = CreatePen(PS_DOT, 1, AdjustColor(color, 30));
     HGDIOBJ oldPen = SelectObject(hdc, pen);
     HGDIOBJ oldBrush = SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));
 
-    RoundRect(hdc, left + 6, top + 6, left + CELL_SIZE - 6, top + CELL_SIZE - 6, 6, 6);
+    RoundRect(hdc, left + 6, top + 6, left + AppConfig::CellSize - 6, top + AppConfig::CellSize - 6, 6, 6);
 
     SelectObject(hdc, oldBrush);
     SelectObject(hdc, oldPen);
@@ -555,7 +537,7 @@ void DrawStatusPanel(HDC hdc, int x, int y, int width)
                        RGB(31, 35, 36), RGB(61, 70, 62));
     DrawTextLine(hdc, x + 14, y + 10, "Status", 16, RGB(170, 178, 158), FW_NORMAL);
     if (observedLevelUpEventId > 0 &&
-        GetTickCount() - levelFlashStartedAt < static_cast<DWORD>(LEVEL_FLASH_DURATION_MS) &&
+        GetTickCount() - levelFlashStartedAt < static_cast<DWORD>(AppConfig::LevelFlashDurationMs) &&
         game.IsStarted() && !game.IsGameOver() && !game.IsPaused() && !settingsOpen)
     {
         DrawTextLine(hdc, x + 14, y + 30, "LEVEL UP", 22, RGB(122, 214, 176), FW_BOLD);
@@ -586,10 +568,10 @@ void DrawStatusPanel(HDC hdc, int x, int y, int width)
 void DrawOverlayPanel(HDC hdc, const std::string &title, const std::string &action,
                       const std::string &detail, COLORREF accent)
 {
-    int left = BOARD_LEFT + 22;
-    int right = BOARD_LEFT + CELL_SIZE * 10 - 22;
-    int top = BOARD_TOP + 164;
-    int bottom = BOARD_TOP + 394;
+    int left = AppConfig::BoardLeft + 22;
+    int right = AppConfig::BoardLeft + AppConfig::CellSize * 10 - 22;
+    int top = AppConfig::BoardTop + 164;
+    int bottom = AppConfig::BoardTop + 394;
 
     FillRoundRectColor(hdc, left + 5, top + 7, right + 5, bottom + 7, 12,
                        RGB(10, 12, 12), RGB(10, 12, 12));
@@ -604,10 +586,10 @@ void DrawOverlayPanel(HDC hdc, const std::string &title, const std::string &acti
 
 void DrawGameOverOverlay(HDC hdc)
 {
-    int left = BOARD_LEFT + 18;
-    int right = BOARD_LEFT + CELL_SIZE * 10 - 18;
-    int top = BOARD_TOP + 112;
-    int bottom = BOARD_TOP + 438;
+    int left = AppConfig::BoardLeft + 18;
+    int right = AppConfig::BoardLeft + AppConfig::CellSize * 10 - 18;
+    int top = AppConfig::BoardTop + 112;
+    int bottom = AppConfig::BoardTop + 438;
     COLORREF accent = RGB(240, 101, 95);
 
     FillRoundRectColor(hdc, left + 5, top + 7, right + 5, bottom + 7, 12,
@@ -747,8 +729,8 @@ void DrawSettingMeter(HDC hdc, int left, int top, int width, int value, int mini
 
 void DrawSettingsRow(HDC hdc, int index, int top)
 {
-    const int left = BOARD_LEFT + 58;
-    const int right = WINDOW_WIDTH - 58;
+    const int left = AppConfig::BoardLeft + 58;
+    const int right = AppConfig::WindowWidth - 58;
     bool selected = selectedSettingIndex == index;
     COLORREF accent = selected ? RGB(123, 205, 236) : RGB(86, 98, 88);
     COLORREF fill = selected ? RGB(39, 48, 49) : RGB(29, 34, 34);
@@ -804,10 +786,10 @@ void DrawSettingsOverlay(HDC hdc)
         return;
     }
 
-    const int left = BOARD_LEFT + 34;
-    const int right = WINDOW_WIDTH - 34;
-    const int top = BOARD_TOP + 104;
-    const int bottom = BOARD_TOP + 500;
+    const int left = AppConfig::BoardLeft + 34;
+    const int right = AppConfig::WindowWidth - 34;
+    const int top = AppConfig::BoardTop + 104;
+    const int bottom = AppConfig::BoardTop + 500;
 
     FillRoundRectColor(hdc, left + 6, top + 8, right + 6, bottom + 8, 12,
                        RGB(9, 11, 11), RGB(9, 11, 11));
@@ -859,7 +841,7 @@ bool IsLevelFlashActive()
     }
 
     DWORD elapsed = GetTickCount() - levelFlashStartedAt;
-    return elapsed < static_cast<DWORD>(LEVEL_FLASH_DURATION_MS);
+    return elapsed < static_cast<DWORD>(AppConfig::LevelFlashDurationMs);
 }
 
 bool IsLockDelayReadyToFinish()
@@ -875,7 +857,7 @@ bool IsLockDelayReadyToFinish()
     }
 
     DWORD elapsed = GetTickCount() - lockDelayStartedAt;
-    return elapsed >= static_cast<DWORD>(LOCK_DELAY_MS);
+    return elapsed >= static_cast<DWORD>(AppConfig::LockDelayMs);
 }
 
 void UpdateClearFlash(HWND hwnd)
@@ -887,8 +869,8 @@ void UpdateClearFlash(HWND hwnd)
         if (clearEventId > 0 && game.IsLineClearPending())
         {
             clearFlashStartedAt = GetTickCount();
-            KillTimer(hwnd, TIMER_ID);
-            SetTimer(hwnd, FLASH_TIMER_ID, 24, nullptr);
+            KillTimer(hwnd, AppConfig::DropTimerId);
+            SetTimer(hwnd, AppConfig::ClearFlashTimerId, 24, nullptr);
         }
     }
 }
@@ -902,7 +884,7 @@ void UpdateLevelFlash(HWND hwnd)
         if (levelUpEventId > 0)
         {
             levelFlashStartedAt = GetTickCount();
-            SetTimer(hwnd, LEVEL_TIMER_ID, 45, nullptr);
+            SetTimer(hwnd, AppConfig::LevelFlashTimerId, 45, nullptr);
         }
     }
 }
@@ -911,14 +893,14 @@ void UpdateLockDelay(HWND hwnd)
 {
     if (!game.IsLockDelayActive())
     {
-        KillTimer(hwnd, LOCK_TIMER_ID);
+        KillTimer(hwnd, AppConfig::LockDelayTimerId);
         lockDelayTimerRunning = false;
         return;
     }
 
     if (game.IsPaused() || settingsOpen)
     {
-        KillTimer(hwnd, LOCK_TIMER_ID);
+        KillTimer(hwnd, AppConfig::LockDelayTimerId);
         lockDelayTimerRunning = false;
         return;
     }
@@ -928,8 +910,8 @@ void UpdateLockDelay(HWND hwnd)
     {
         observedLockDelayEventId = lockDelayEventId;
         lockDelayStartedAt = GetTickCount();
-        KillTimer(hwnd, TIMER_ID);
-        SetTimer(hwnd, LOCK_TIMER_ID, 30, nullptr);
+        KillTimer(hwnd, AppConfig::DropTimerId);
+        SetTimer(hwnd, AppConfig::LockDelayTimerId, 30, nullptr);
         lockDelayTimerRunning = true;
     }
 }
@@ -938,21 +920,21 @@ void FinishClearFlash(HWND hwnd)
 {
     game.FinishLineClear();
     RecordGameOverScoreIfNeeded();
-    KillTimer(hwnd, FLASH_TIMER_ID);
-    SetTimer(hwnd, TIMER_ID, game.GetDropIntervalMs(), nullptr);
+    KillTimer(hwnd, AppConfig::ClearFlashTimerId);
+    SetTimer(hwnd, AppConfig::DropTimerId, game.GetDropIntervalMs(), nullptr);
 }
 
 void FinishLockDelay(HWND hwnd)
 {
     game.FinishLockDelay();
     RecordGameOverScoreIfNeeded();
-    KillTimer(hwnd, LOCK_TIMER_ID);
+    KillTimer(hwnd, AppConfig::LockDelayTimerId);
     lockDelayTimerRunning = false;
     UpdateClearFlash(hwnd);
     UpdateLevelFlash(hwnd);
     if (!game.IsLineClearPending() && !game.IsLockDelayActive() && !game.IsPaused() && !settingsOpen)
     {
-        SetTimer(hwnd, TIMER_ID, game.GetDropIntervalMs(), nullptr);
+        SetTimer(hwnd, AppConfig::DropTimerId, game.GetDropIntervalMs(), nullptr);
     }
 }
 
@@ -997,14 +979,14 @@ void StartHorizontalInputTimer(HWND hwnd)
 {
     if (!inputTimerRunning)
     {
-        SetTimer(hwnd, INPUT_TIMER_ID, 12, nullptr);
+        SetTimer(hwnd, AppConfig::InputTimerId, 12, nullptr);
         inputTimerRunning = true;
     }
 }
 
 void StopHorizontalInputTimer(HWND hwnd)
 {
-    KillTimer(hwnd, INPUT_TIMER_ID);
+    KillTimer(hwnd, AppConfig::InputTimerId);
     inputTimerRunning = false;
 }
 
@@ -1025,8 +1007,8 @@ void ToggleSettings(HWND hwnd)
 
     if (settingsOpen)
     {
-        KillTimer(hwnd, TIMER_ID);
-        KillTimer(hwnd, LOCK_TIMER_ID);
+        KillTimer(hwnd, AppConfig::DropTimerId);
+        KillTimer(hwnd, AppConfig::LockDelayTimerId);
         lockDelayTimerRunning = false;
     }
     else
@@ -1034,7 +1016,7 @@ void ToggleSettings(HWND hwnd)
         UpdateLockDelay(hwnd);
         if (!game.IsLineClearPending() && !game.IsLockDelayActive() && !game.IsPaused())
         {
-            SetTimer(hwnd, TIMER_ID, game.GetDropIntervalMs(), nullptr);
+            SetTimer(hwnd, AppConfig::DropTimerId, game.GetDropIntervalMs(), nullptr);
         }
     }
 
@@ -1327,25 +1309,25 @@ void DrawLineClearFlash(HDC hdc)
 
     for (int row : game.GetLastClearedRows())
     {
-        int top = BOARD_TOP + row * CELL_SIZE;
-        FillRoundRectColor(hdc, BOARD_LEFT + 4, top + 5,
-                           BOARD_LEFT + CELL_SIZE * 10 - 4, top + CELL_SIZE - 5,
+        int top = AppConfig::BoardTop + row * AppConfig::CellSize;
+        FillRoundRectColor(hdc, AppConfig::BoardLeft + 4, top + 5,
+                           AppConfig::BoardLeft + AppConfig::CellSize * 10 - 4, top + AppConfig::CellSize - 5,
                            6, flashColor, AdjustColor(flashColor, -55));
-        FillRectColor(hdc, BOARD_LEFT + 12, top + 12,
-                      BOARD_LEFT + CELL_SIZE * 10 - 12, top + 16,
+        FillRectColor(hdc, AppConfig::BoardLeft + 12, top + 12,
+                      AppConfig::BoardLeft + AppConfig::CellSize * 10 - 12, top + 16,
                       RGB(255, 255, 245));
     }
 }
 
 void DrawGame(HDC hdc)
 {
-    FillVerticalGradient(hdc, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT,
+    FillVerticalGradient(hdc, 0, 0, AppConfig::WindowWidth, AppConfig::WindowHeight,
                          RGB(18, 22, 21), RGB(35, 38, 32));
-    DrawTextLine(hdc, BOARD_LEFT, 20, "TETRIS", 30, RGB(248, 244, 225), FW_BOLD);
-    DrawTextLine(hdc, BOARD_LEFT + 118, 28, "native C++", 14, RGB(154, 164, 145), FW_NORMAL);
+    DrawTextLine(hdc, AppConfig::BoardLeft, 20, "TETRIS", 30, RGB(248, 244, 225), FW_BOLD);
+    DrawTextLine(hdc, AppConfig::BoardLeft + 118, 28, "native C++", 14, RGB(154, 164, 145), FW_NORMAL);
 
-    FillRoundRectColor(hdc, BOARD_LEFT - 8, BOARD_TOP - 8,
-                       BOARD_LEFT + CELL_SIZE * 10 + 8, BOARD_TOP + CELL_SIZE * 20 + 8,
+    FillRoundRectColor(hdc, AppConfig::BoardLeft - 8, AppConfig::BoardTop - 8,
+                       AppConfig::BoardLeft + AppConfig::CellSize * 10 + 8, AppConfig::BoardTop + AppConfig::CellSize * 20 + 8,
                        10, RGB(12, 15, 15), RGB(67, 76, 66));
 
     int display[20][10];
@@ -1384,25 +1366,25 @@ void DrawGame(HDC hdc)
 
     DrawLineClearFlash(hdc);
 
-    int panelX = BOARD_LEFT + CELL_SIZE * 10 + 34;
-    int panelWidth = WINDOW_WIDTH - panelX - 32;
-    FillRoundRectColor(hdc, panelX - 12, BOARD_TOP - 8,
-                       WINDOW_WIDTH - 24, BOARD_TOP + CELL_SIZE * 20 + 8,
+    int panelX = AppConfig::BoardLeft + AppConfig::CellSize * 10 + 34;
+    int panelWidth = AppConfig::WindowWidth - panelX - 32;
+    FillRoundRectColor(hdc, panelX - 12, AppConfig::BoardTop - 8,
+                       AppConfig::WindowWidth - 24, AppConfig::BoardTop + AppConfig::CellSize * 20 + 8,
                        10, RGB(24, 28, 28), RGB(58, 68, 58));
 
-    DrawMetricPanel(hdc, panelX, BOARD_TOP + 10, panelWidth, 86,
+    DrawMetricPanel(hdc, panelX, AppConfig::BoardTop + 10, panelWidth, 86,
                     "Score", std::to_string(game.GetScore()));
-    DrawTextLine(hdc, panelX + 14, BOARD_TOP + 72,
+    DrawTextLine(hdc, panelX + 14, AppConfig::BoardTop + 72,
                  "Best " + std::to_string(game.GetHighScore()), 15, RGB(170, 178, 158), FW_NORMAL);
-    DrawMetricPanel(hdc, panelX, BOARD_TOP + 112, (panelWidth - 12) / 2, 78,
+    DrawMetricPanel(hdc, panelX, AppConfig::BoardTop + 112, (panelWidth - 12) / 2, 78,
                     "Lines", std::to_string(game.GetLinesCleared()));
-    DrawMetricPanel(hdc, panelX + (panelWidth + 12) / 2, BOARD_TOP + 112,
+    DrawMetricPanel(hdc, panelX + (panelWidth + 12) / 2, AppConfig::BoardTop + 112,
                     (panelWidth - 12) / 2, 78, "Level", std::to_string(game.GetLevel()));
-    DrawBlockPreview(hdc, panelX, BOARD_TOP + 208, panelWidth, 126,
+    DrawBlockPreview(hdc, panelX, AppConfig::BoardTop + 208, panelWidth, 126,
                      "Hold", game.GetHeldBlockCells(), game.GetHeldBlockId(), !game.CanHold());
-    DrawBlockQueuePreview(hdc, panelX, BOARD_TOP + 350, panelWidth, 126,
+    DrawBlockQueuePreview(hdc, panelX, AppConfig::BoardTop + 350, panelWidth, 126,
                           "Next", game.GetUpcomingBlockCells(), game.GetUpcomingBlockIds());
-    DrawStatusPanel(hdc, panelX, BOARD_TOP + 486, panelWidth);
+    DrawStatusPanel(hdc, panelX, AppConfig::BoardTop + 486, panelWidth);
     DrawStateOverlay(hdc);
     DrawSettingsOverlay(hdc);
 }
@@ -1466,10 +1448,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
     switch (message)
     {
     case WM_CREATE:
-        SetTimer(hwnd, TIMER_ID, game.GetDropIntervalMs(), nullptr);
+        SetTimer(hwnd, AppConfig::DropTimerId, game.GetDropIntervalMs(), nullptr);
         return 0;
     case WM_TIMER:
-        if (wParam == FLASH_TIMER_ID)
+        if (wParam == AppConfig::ClearFlashTimerId)
         {
             if (IsClearFlashReadyToFinish())
             {
@@ -1477,23 +1459,23 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             }
             else if (!game.IsLineClearPending())
             {
-                KillTimer(hwnd, FLASH_TIMER_ID);
+                KillTimer(hwnd, AppConfig::ClearFlashTimerId);
             }
             InvalidateRect(hwnd, nullptr, FALSE);
             return 0;
         }
 
-        if (wParam == LEVEL_TIMER_ID)
+        if (wParam == AppConfig::LevelFlashTimerId)
         {
             if (!IsLevelFlashActive())
             {
-                KillTimer(hwnd, LEVEL_TIMER_ID);
+                KillTimer(hwnd, AppConfig::LevelFlashTimerId);
             }
             InvalidateRect(hwnd, nullptr, FALSE);
             return 0;
         }
 
-        if (wParam == LOCK_TIMER_ID)
+        if (wParam == AppConfig::LockDelayTimerId)
         {
             if (IsLockDelayReadyToFinish())
             {
@@ -1501,14 +1483,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             }
             else if (!game.IsLockDelayActive())
             {
-                KillTimer(hwnd, LOCK_TIMER_ID);
+                KillTimer(hwnd, AppConfig::LockDelayTimerId);
                 lockDelayTimerRunning = false;
             }
             InvalidateRect(hwnd, nullptr, FALSE);
             return 0;
         }
 
-        if (wParam == INPUT_TIMER_ID)
+        if (wParam == AppConfig::InputTimerId)
         {
             TickHorizontalInput(hwnd);
             return 0;
@@ -1527,7 +1509,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         RecordGameOverScoreIfNeeded();
         if (!game.IsLineClearPending() && !game.IsLockDelayActive())
         {
-            SetTimer(hwnd, TIMER_ID, game.GetDropIntervalMs(), nullptr);
+            SetTimer(hwnd, AppConfig::DropTimerId, game.GetDropIntervalMs(), nullptr);
         }
         InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
@@ -1570,11 +1552,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         PAINTSTRUCT paint;
         HDC hdc = BeginPaint(hwnd, &paint);
         HDC memoryDc = CreateCompatibleDC(hdc);
-        HBITMAP bitmap = CreateCompatibleBitmap(hdc, WINDOW_WIDTH, WINDOW_HEIGHT);
+        HBITMAP bitmap = CreateCompatibleBitmap(hdc, AppConfig::WindowWidth, AppConfig::WindowHeight);
         HBITMAP oldBitmap = static_cast<HBITMAP>(SelectObject(memoryDc, bitmap));
 
         DrawGame(memoryDc);
-        BitBlt(hdc, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, memoryDc, 0, 0, SRCCOPY);
+        BitBlt(hdc, 0, 0, AppConfig::WindowWidth, AppConfig::WindowHeight, memoryDc, 0, 0, SRCCOPY);
 
         SelectObject(memoryDc, oldBitmap);
         DeleteObject(bitmap);
@@ -1583,11 +1565,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         return 0;
     }
     case WM_DESTROY:
-        KillTimer(hwnd, TIMER_ID);
-        KillTimer(hwnd, FLASH_TIMER_ID);
-        KillTimer(hwnd, LEVEL_TIMER_ID);
-        KillTimer(hwnd, LOCK_TIMER_ID);
-        KillTimer(hwnd, INPUT_TIMER_ID);
+        KillTimer(hwnd, AppConfig::DropTimerId);
+        KillTimer(hwnd, AppConfig::ClearFlashTimerId);
+        KillTimer(hwnd, AppConfig::LevelFlashTimerId);
+        KillTimer(hwnd, AppConfig::LockDelayTimerId);
+        KillTimer(hwnd, AppConfig::InputTimerId);
         PostQuitMessage(0);
         return 0;
     default:
@@ -1598,16 +1580,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int showCommand)
 {
     LoadGameFont();
-    leaderboard = LoadLeaderboard(LEADERBOARD_FILE);
-    int savedHighScore = LoadHighScore(HIGH_SCORE_FILE);
+    leaderboard = LoadLeaderboard(AppConfig::LeaderboardFile);
+    int savedHighScore = LoadHighScore(AppConfig::HighScoreFile);
     if (leaderboard.empty() && savedHighScore > 0)
     {
         leaderboard = AddLeaderboardScore(leaderboard, savedHighScore);
-        SaveLeaderboard(LEADERBOARD_FILE, leaderboard);
+        SaveLeaderboard(AppConfig::LeaderboardFile, leaderboard);
     }
     int leaderboardHighScore = GetBestLeaderboardScore(leaderboard);
     game.SetHighScore(savedHighScore > leaderboardHighScore ? savedHighScore : leaderboardHighScore);
-    ApplyRuntimeSettings(LoadSettings(SETTINGS_FILE));
+    ApplyRuntimeSettings(LoadSettings(AppConfig::SettingsFile));
 
     const char className[] = "HuiShanTetrisWindow";
 
@@ -1620,7 +1602,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int showCommand)
 
     RegisterClassA(&windowClass);
 
-    RECT windowRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
+    RECT windowRect = {0, 0, AppConfig::WindowWidth, AppConfig::WindowHeight};
     AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW, FALSE);
 
     HWND hwnd = CreateWindowExA(0, className, "Tetris - By HuiShan",
@@ -1646,9 +1628,9 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int showCommand)
         DispatchMessage(&message);
     }
 
-    SaveHighScore(HIGH_SCORE_FILE, game.GetHighScore());
-    SaveLeaderboard(LEADERBOARD_FILE, leaderboard);
-    SaveSettings(SETTINGS_FILE, CollectRuntimeSettings());
+    SaveHighScore(AppConfig::HighScoreFile, game.GetHighScore());
+    SaveLeaderboard(AppConfig::LeaderboardFile, leaderboard);
+    SaveSettings(AppConfig::SettingsFile, CollectRuntimeSettings());
     UnloadGameFont();
 
     return static_cast<int>(message.wParam);

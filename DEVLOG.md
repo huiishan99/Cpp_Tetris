@@ -26,6 +26,24 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Centralize app configuration
+
+- Changed: Added `src/app_config.h` for Win32 window size, board layout, timer
+  IDs, persistence file names, and font names. Updated `src/main.cpp` to read
+  those values from the shared config header and updated the README project map.
+- Why: Keep UI shell constants in one obvious place before larger Win32 drawing
+  or input refactors.
+- Risk: Mechanical constant replacement touches window creation, drawing,
+  timers, persistence, and font loading. The portable core is unchanged, but
+  the Win32 GUI still needs a Windows smoke test.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp src/sound.cpp -o
+  /private/tmp/tetris_core_tests` and ran `/private/tmp/tetris_core_tests`;
+  all core tests passed.
+- Follow-ups: Split `src/main.cpp` further into drawing, input, and persistence
+  bridge modules after another Windows playtest.
+
 ### 2026-05-25 - Add README gameplay preview
 
 - Changed: Added a stylized gameplay preview SVG for the README and a
