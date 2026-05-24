@@ -93,6 +93,7 @@ private:
     void FillUpcomingBlocks();
     bool BlockFits() const;
     bool BlockFits(const Block &block) const;
+    void InitializeRuntimeState(int initialLinesCleared);
     void Reset();
     void UpdateScore(int LinesCleared, int moveDownPoints, int spinBlockId = 0, int clearScoreOverride = -1);
     void UpdateHighScore();

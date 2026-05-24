@@ -26,6 +26,22 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Deduplicate game runtime state reset
+
+- Changed: Added `Game::InitializeRuntimeState` and routed constructors plus
+  restart reset through it.
+- Why: Keep new scoring flags, combo/B2B state, lock-delay state, and clear
+  feedback state initialized in one place.
+- Risk: Refactor-only core logic change; constructor and restart behavior
+  should remain the same.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp
+  src/settings_options.cpp src/sound.cpp -o /private/tmp/tetris_core_tests`
+  and ran `/private/tmp/tetris_core_tests`; all core tests passed.
+- Follow-ups: Continue splitting larger modules only after Windows smoke tests
+  confirm the newer UI and settings flows.
+
 ### 2026-05-25 - Upgrade gameplay settings
 
 - Changed: Added persisted tuning preset, control scheme, window scale, and

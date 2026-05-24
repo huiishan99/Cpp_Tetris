@@ -133,15 +133,13 @@ std::vector<Position> GetSrsKickOffsets(int blockId, int fromRotationState, int 
 }
 }
 
-Game::Game()
+void Game::InitializeRuntimeState(int initialLinesCleared)
 {
-    grid = Grid();
-    randomGenerator = std::mt19937(std::random_device{}());
-    blocks = GetAllBlocks();
-    upcomingBlocks.clear();
-    currentBlock = GetRandomBlock();
-    nextBlock = GetRandomBlock();
-    FillUpcomingBlocks();
+    if (initialLinesCleared < 0)
+    {
+        initialLinesCleared = 0;
+    }
+
     gameOver = false;
     started = false;
     paused = false;
@@ -156,18 +154,31 @@ Game::Game()
     lastClearWasTSpin = false;
     lastClearSpinBlockId = 0;
     score = 0;
-    highScore = 0;
-    linesCleared = 0;
+    linesCleared = initialLinesCleared;
     lastClearLines = 0;
     lastClearScore = 0;
     lastComboBonus = 0;
     lastBackToBackBonus = 0;
     lastPerfectClearBonus = 0;
+    lastClearedRows.clear();
     clearEventId = 0;
     combo = 0;
     levelUpEventId = 0;
-    lastLevelReached = 1;
+    lastLevelReached = CalculateLevel(linesCleared);
     lockDelayEventId = 0;
+}
+
+Game::Game()
+{
+    grid = Grid();
+    randomGenerator = std::mt19937(std::random_device{}());
+    blocks = GetAllBlocks();
+    upcomingBlocks.clear();
+    currentBlock = GetRandomBlock();
+    nextBlock = GetRandomBlock();
+    FillUpcomingBlocks();
+    highScore = 0;
+    InitializeRuntimeState(0);
 }
 
 Game::Game(const Block &startingBlock, const Block &upcomingBlock)
@@ -178,32 +189,8 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock)
     currentBlock = startingBlock;
     nextBlock = upcomingBlock;
     FillUpcomingBlocks();
-    gameOver = false;
-    started = false;
-    paused = false;
-    lineClearPending = false;
-    lockDelayActive = false;
-    hasHeldBlock = false;
-    holdUsed = false;
-    lastSuccessfulActionWasRotate = false;
-    backToBackReady = false;
-    lastClearWasBackToBack = false;
-    lastClearWasPerfectClear = false;
-    lastClearWasTSpin = false;
-    lastClearSpinBlockId = 0;
-    score = 0;
     highScore = 0;
-    linesCleared = 0;
-    lastClearLines = 0;
-    lastClearScore = 0;
-    lastComboBonus = 0;
-    lastBackToBackBonus = 0;
-    lastPerfectClearBonus = 0;
-    clearEventId = 0;
-    combo = 0;
-    levelUpEventId = 0;
-    lastLevelReached = 1;
-    lockDelayEventId = 0;
+    InitializeRuntimeState(0);
 }
 
 Game::Game(const Block &startingBlock, const Block &upcomingBlock, const Grid &initialGrid)
@@ -214,73 +201,20 @@ Game::Game(const Block &startingBlock, const Block &upcomingBlock, const Grid &i
     currentBlock = startingBlock;
     nextBlock = upcomingBlock;
     FillUpcomingBlocks();
-    gameOver = false;
-    started = false;
-    paused = false;
-    lineClearPending = false;
-    lockDelayActive = false;
-    hasHeldBlock = false;
-    holdUsed = false;
-    lastSuccessfulActionWasRotate = false;
-    backToBackReady = false;
-    lastClearWasBackToBack = false;
-    lastClearWasPerfectClear = false;
-    lastClearWasTSpin = false;
-    lastClearSpinBlockId = 0;
-    score = 0;
     highScore = 0;
-    linesCleared = 0;
-    lastClearLines = 0;
-    lastClearScore = 0;
-    lastComboBonus = 0;
-    lastBackToBackBonus = 0;
-    lastPerfectClearBonus = 0;
-    clearEventId = 0;
-    combo = 0;
-    levelUpEventId = 0;
-    lastLevelReached = CalculateLevel(linesCleared);
-    lockDelayEventId = 0;
+    InitializeRuntimeState(0);
 }
 
 Game::Game(const Block &startingBlock, const Block &upcomingBlock, const Grid &initialGrid, int initialLinesCleared)
 {
-    if (initialLinesCleared < 0)
-    {
-        initialLinesCleared = 0;
-    }
-
     grid = initialGrid;
     randomGenerator = std::mt19937(0);
     blocks = GetAllBlocks();
     currentBlock = startingBlock;
     nextBlock = upcomingBlock;
     FillUpcomingBlocks();
-    gameOver = false;
-    started = false;
-    paused = false;
-    lineClearPending = false;
-    lockDelayActive = false;
-    hasHeldBlock = false;
-    holdUsed = false;
-    lastSuccessfulActionWasRotate = false;
-    backToBackReady = false;
-    lastClearWasBackToBack = false;
-    lastClearWasPerfectClear = false;
-    lastClearWasTSpin = false;
-    lastClearSpinBlockId = 0;
-    score = 0;
     highScore = 0;
-    linesCleared = initialLinesCleared;
-    lastClearLines = 0;
-    lastClearScore = 0;
-    lastComboBonus = 0;
-    lastBackToBackBonus = 0;
-    lastPerfectClearBonus = 0;
-    clearEventId = 0;
-    combo = 0;
-    levelUpEventId = 0;
-    lastLevelReached = CalculateLevel(linesCleared);
-    lockDelayEventId = 0;
+    InitializeRuntimeState(initialLinesCleared);
 }
 
 Block Game::GetRandomBlock()
@@ -1233,32 +1167,7 @@ void Game::Reset()
     currentBlock = GetRandomBlock();
     nextBlock = GetRandomBlock();
     FillUpcomingBlocks();
-    gameOver = false;
-    started = false;
-    paused = false;
-    lineClearPending = false;
-    lockDelayActive = false;
-    hasHeldBlock = false;
-    holdUsed = false;
-    lastSuccessfulActionWasRotate = false;
-    backToBackReady = false;
-    lastClearWasBackToBack = false;
-    lastClearWasPerfectClear = false;
-    lastClearWasTSpin = false;
-    lastClearSpinBlockId = 0;
-    score = 0;
-    linesCleared = 0;
-    lastClearLines = 0;
-    lastClearScore = 0;
-    lastComboBonus = 0;
-    lastBackToBackBonus = 0;
-    lastPerfectClearBonus = 0;
-    lastClearedRows.clear();
-    clearEventId = 0;
-    combo = 0;
-    levelUpEventId = 0;
-    lastLevelReached = 1;
-    lockDelayEventId = 0;
+    InitializeRuntimeState(0);
 }
 
 void Game::UpdateScore(int linesCompleted, int moveDownPoints, int spinBlockId, int clearScoreOverride)
