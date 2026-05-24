@@ -7,6 +7,8 @@ The game has grown from a small practice project into a sharper arcade-style
 Tetris with hold, ghost piece, spin clears, combo feedback, persistent best
 score, and a dark pixel UI.
 
+![Native C++ Tetris gameplay preview](docs/gameplay-preview.svg)
+
 ## Why It Feels Good
 
 - Hold, ghost landing, and a three-piece next queue for planning ahead

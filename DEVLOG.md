@@ -26,6 +26,22 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Add README gameplay preview
+
+- Changed: Added a stylized gameplay preview SVG for the README and a
+  `docs/CAPTURE_MEDIA.md` guide for replacing it with a real Windows
+  screenshot or GIF after playtesting.
+- Why: Give the project page an immediate visual signal while avoiding a fake
+  claim that a real Win32 screenshot was captured in this macOS environment.
+- Risk: The preview is illustrative, not an exact runtime screenshot.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp src/sound.cpp -o
+  /private/tmp/tetris_core_tests` and ran `/private/tmp/tetris_core_tests`;
+  all core tests passed.
+- Follow-ups: Capture and commit a real Windows screenshot or gameplay GIF
+  after the next Windows playtest.
+
 ### 2026-05-25 - Improve release packaging
 
 - Changed: Added `VERSION`, release and Windows playtest checklists under

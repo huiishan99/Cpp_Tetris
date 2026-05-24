@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="620" viewBox="0 0 960 620" role="img" aria-labelledby="title desc">
+  <title id="title">Native C++ Tetris gameplay preview</title>
+  <desc id="desc">A stylized preview of the Tetris board, side panels, hold queue, next pieces, settings, and leaderboard features.</desc>
+  <rect width="960" height="620" fill="#151817"/>
+  <rect x="40" y="36" width="880" height="548" rx="18" fill="#202522" stroke="#475244" stroke-width="2"/>
+  <text x="74" y="82" fill="#f8f4e1" font-family="monospace" font-size="42" font-weight="700">TETRIS</text>
+  <text x="238" y="82" fill="#9aa491" font-family="monospace" font-size="18">native C++</text>
+
+  <g transform="translate(74 116)">
+    <rect x="-10" y="-10" width="304" height="444" rx="10" fill="#0c0f0f" stroke="#435042" stroke-width="2"/>
+    <g fill="#111414" stroke="#1b211f" stroke-width="1">
+      <rect x="0" y="0" width="28" height="28" rx="5"/>
+      <rect x="29" y="0" width="28" height="28" rx="5"/>
+      <rect x="58" y="0" width="28" height="28" rx="5"/>
+      <rect x="87" y="0" width="28" height="28" rx="5"/>
+      <rect x="116" y="0" width="28" height="28" rx="5"/>
+      <rect x="145" y="0" width="28" height="28" rx="5"/>
+      <rect x="174" y="0" width="28" height="28" rx="5"/>
+      <rect x="203" y="0" width="28" height="28" rx="5"/>
+      <rect x="232" y="0" width="28" height="28" rx="5"/>
+      <rect x="261" y="0" width="28" height="28" rx="5"/>
+    </g>
+    <g fill="#111414" stroke="#1b211f" stroke-width="1">
+      <rect x="0" y="29" width="28" height="28" rx="5"/>
+      <rect x="29" y="29" width="28" height="28" rx="5"/>
+      <rect x="58" y="29" width="28" height="28" rx="5"/>
+      <rect x="87" y="29" width="28" height="28" rx="5"/>
+      <rect x="116" y="29" width="28" height="28" rx="5"/>
+      <rect x="145" y="29" width="28" height="28" rx="5"/>
+      <rect x="174" y="29" width="28" height="28" rx="5"/>
+      <rect x="203" y="29" width="28" height="28" rx="5"/>
+      <rect x="232" y="29" width="28" height="28" rx="5"/>
+      <rect x="261" y="29" width="28" height="28" rx="5"/>
+    </g>
+    <g opacity="0.55" fill="none" stroke="#7bcdec" stroke-width="2" stroke-dasharray="4 5">
+      <rect x="116" y="232" width="28" height="28" rx="5"/>
+      <rect x="145" y="232" width="28" height="28" rx="5"/>
+      <rect x="145" y="261" width="28" height="28" rx="5"/>
+      <rect x="174" y="261" width="28" height="28" rx="5"/>
+    </g>
+    <g>
+      <rect x="116" y="145" width="28" height="28" rx="5" fill="#a600f7" stroke="#6e00a6"/>
+      <rect x="87" y="174" width="28" height="28" rx="5" fill="#a600f7" stroke="#6e00a6"/>
+      <rect x="116" y="174" width="28" height="28" rx="5" fill="#a600f7" stroke="#6e00a6"/>
+      <rect x="145" y="174" width="28" height="28" rx="5" fill="#a600f7" stroke="#6e00a6"/>
+    </g>
+    <g>
+      <rect x="0" y="377" width="28" height="28" rx="5" fill="#e81212" stroke="#9f0b0b"/>
+      <rect x="29" y="377" width="28" height="28" rx="5" fill="#e81212" stroke="#9f0b0b"/>
+      <rect x="58" y="377" width="28" height="28" rx="5" fill="#15ccd1" stroke="#0b8588"/>
+      <rect x="87" y="377" width="28" height="28" rx="5" fill="#15ccd1" stroke="#0b8588"/>
+      <rect x="116" y="377" width="28" height="28" rx="5" fill="#15ccd1" stroke="#0b8588"/>
+      <rect x="145" y="377" width="28" height="28" rx="5" fill="#15ccd1" stroke="#0b8588"/>
+      <rect x="203" y="377" width="28" height="28" rx="5" fill="#2fe617" stroke="#1c9910"/>
+      <rect x="232" y="377" width="28" height="28" rx="5" fill="#2fe617" stroke="#1c9910"/>
+      <rect x="261" y="377" width="28" height="28" rx="5" fill="#e27411" stroke="#9c4b09"/>
+      <rect x="0" y="406" width="28" height="28" rx="5" fill="#fdea04" stroke="#a6a000"/>
+      <rect x="29" y="406" width="28" height="28" rx="5" fill="#fdea04" stroke="#a6a000"/>
+      <rect x="58" y="406" width="28" height="28" rx="5" fill="#0d40d8" stroke="#082b92"/>
+      <rect x="87" y="406" width="28" height="28" rx="5" fill="#0d40d8" stroke="#082b92"/>
+      <rect x="116" y="406" width="28" height="28" rx="5" fill="#a600f7" stroke="#6e00a6"/>
+      <rect x="145" y="406" width="28" height="28" rx="5" fill="#a600f7" stroke="#6e00a6"/>
+      <rect x="174" y="406" width="28" height="28" rx="5" fill="#a600f7" stroke="#6e00a6"/>
+      <rect x="203" y="406" width="28" height="28" rx="5" fill="#e27411" stroke="#9c4b09"/>
+      <rect x="232" y="406" width="28" height="28" rx="5" fill="#e27411" stroke="#9c4b09"/>
+      <rect x="261" y="406" width="28" height="28" rx="5" fill="#e27411" stroke="#9c4b09"/>
+    </g>
+    <rect x="9" y="346" width="272" height="18" rx="8" fill="#f9d67c" opacity="0.85"/>
+    <text x="74" y="356" fill="#151817" font-family="monospace" font-size="13" font-weight="700">T-SPIN DOUBLE</text>
+  </g>
+
+  <g transform="translate(420 116)">
+    <rect width="214" height="76" rx="8" fill="#1f2324" stroke="#3d463e"/>
+    <text x="16" y="25" fill="#aab29e" font-family="monospace" font-size="16">Score</text>
+    <text x="16" y="58" fill="#f8f4e1" font-family="monospace" font-size="34" font-weight="700">24800</text>
+    <text x="124" y="58" fill="#aab29e" font-family="monospace" font-size="15">Best 41120</text>
+
+    <rect y="96" width="100" height="72" rx="8" fill="#1f2324" stroke="#3d463e"/>
+    <text x="14" y="122" fill="#aab29e" font-family="monospace" font-size="15">Lines</text>
+    <text x="14" y="154" fill="#f8f4e1" font-family="monospace" font-size="28" font-weight="700">38</text>
+    <rect x="114" y="96" width="100" height="72" rx="8" fill="#1f2324" stroke="#3d463e"/>
+    <text x="128" y="122" fill="#aab29e" font-family="monospace" font-size="15">Level</text>
+    <text x="128" y="154" fill="#f8f4e1" font-family="monospace" font-size="28" font-weight="700">4</text>
+
+    <rect y="190" width="214" height="96" rx="8" fill="#1f2324" stroke="#3d463e"/>
+    <text x="14" y="216" fill="#aab29e" font-family="monospace" font-size="15">Hold</text>
+    <rect x="77" y="232" width="24" height="24" rx="5" fill="#fdea04"/>
+    <rect x="102" y="232" width="24" height="24" rx="5" fill="#fdea04"/>
+    <rect x="77" y="257" width="24" height="24" rx="5" fill="#fdea04"/>
+    <rect x="102" y="257" width="24" height="24" rx="5" fill="#fdea04"/>
+
+    <rect y="306" width="214" height="96" rx="8" fill="#1f2324" stroke="#3d463e"/>
+    <text x="14" y="332" fill="#aab29e" font-family="monospace" font-size="15">Next</text>
+    <rect x="42" y="352" width="18" height="18" rx="4" fill="#15ccd1"/>
+    <rect x="61" y="352" width="18" height="18" rx="4" fill="#15ccd1"/>
+    <rect x="80" y="352" width="18" height="18" rx="4" fill="#15ccd1"/>
+    <rect x="99" y="352" width="18" height="18" rx="4" fill="#15ccd1"/>
+    <rect x="139" y="342" width="18" height="18" rx="4" fill="#e81212"/>
+    <rect x="158" y="342" width="18" height="18" rx="4" fill="#e81212"/>
+    <rect x="158" y="361" width="18" height="18" rx="4" fill="#e81212"/>
+    <rect x="177" y="361" width="18" height="18" rx="4" fill="#e81212"/>
+  </g>
+
+  <g transform="translate(668 116)">
+    <rect width="218" height="226" rx="12" fill="#192021" stroke="#418192"/>
+    <rect x="22" y="18" width="174" height="4" fill="#7bcdec"/>
+    <text x="42" y="62" fill="#f8f4e1" font-family="monospace" font-size="26" font-weight="700">SETTINGS</text>
+    <rect x="24" y="84" width="170" height="32" rx="7" fill="#273031" stroke="#7bcdec"/>
+    <text x="38" y="106" fill="#f8f4e1" font-family="monospace" font-size="15" font-weight="700">DAS</text>
+    <text x="128" y="106" fill="#7bcdec" font-family="monospace" font-size="15" font-weight="700">145 ms</text>
+    <rect x="24" y="126" width="170" height="32" rx="7" fill="#1d2222" stroke="#565f58"/>
+    <text x="38" y="148" fill="#b2bba8" font-family="monospace" font-size="15" font-weight="700">NAME</text>
+    <text x="122" y="148" fill="#f8f4e1" font-family="monospace" font-size="15" font-weight="700">NEO7</text>
+    <rect x="24" y="168" width="170" height="32" rx="7" fill="#1d2222" stroke="#565f58"/>
+    <text x="38" y="190" fill="#b2bba8" font-family="monospace" font-size="15" font-weight="700">SOUND</text>
+    <text x="144" y="190" fill="#f8f4e1" font-family="monospace" font-size="15" font-weight="700">ON</text>
+  </g>
+
+  <g transform="translate(668 374)">
+    <rect width="218" height="148" rx="12" fill="#1f2324" stroke="#78464a"/>
+    <text x="36" y="42" fill="#f8f4e1" font-family="monospace" font-size="24" font-weight="700">TOP SCORES</text>
+    <text x="34" y="78" fill="#7bcdec" font-family="monospace" font-size="17" font-weight="700">1.</text>
+    <text x="70" y="78" fill="#f8f4e1" font-family="monospace" font-size="17" font-weight="700">NEO7</text>
+    <text x="146" y="78" fill="#f9d67c" font-family="monospace" font-size="17" font-weight="700">41120</text>
+    <text x="34" y="108" fill="#7bcdec" font-family="monospace" font-size="17" font-weight="700">2.</text>
+    <text x="70" y="108" fill="#f8f4e1" font-family="monospace" font-size="17" font-weight="700">PLAYER</text>
+    <text x="146" y="108" fill="#f9d67c" font-family="monospace" font-size="17" font-weight="700">24800</text>
+  </g>
+</svg>
