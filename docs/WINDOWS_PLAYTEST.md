@@ -5,17 +5,22 @@ real Windows run.
 
 ## Input Feel
 
-- DAS default: 145 ms
-- ARR default: 35 ms
+- Try `PRESET` values: `BEGINNER`, `BALANCED`, `FAST`, and `CUSTOM`.
+- DAS balanced default: 145 ms.
+- ARR balanced default: 35 ms.
 - Hold left/right against a wall and near the floor.
 - Try small taps after holding a direction.
 - Check lock-delay nudges while left/right are held.
+- Switch `CONTROL` between `HYBRID`, `ARROWS`, and `WASD`, then confirm the
+  blocked scheme no longer moves pieces.
 
 ## UI Pass
 
-- READY overlay fits the board.
-- PAUSED overlay resumes on any key.
-- F1 settings panel fits all rows, including NAME.
+- Main menu selection moves cleanly and starts the game with Enter/Space.
+- Pause menu continues, restarts, opens settings, opens leaderboard, and quits.
+- F1 settings panel fits all rows, including PRESET, CONTROL, WINDOW, VOLUME,
+  and NAME.
+- `WINDOW` scale 100%, 125%, and 150% keep the fixed pixel canvas readable.
 - Game-over leaderboard and name-entry overlay do not overlap text.
 - Pixel font loads from `Font\monogram.ttf`.
 
@@ -23,11 +28,22 @@ real Windows run.
 
 - Move and soft-drop cues should stay subtle.
 - Hard drop should feel heavier.
-- Tetris and spin clear cues should stand out.
+- Tetris, spin, B2B, and perfect clear cues should stand out.
+- `VOLUME` changes cue length enough to notice without muting at non-zero
+  values.
 - Sound OFF in settings should silence all cues.
+
+## Scoring Pass
+
+- Normal line clear shows base clear feedback.
+- Combo x2 or higher shows bonus feedback.
+- Back-to-back Tetris or spin clear shows B2B feedback.
+- Perfect clear shows perfect-clear feedback and bonus score.
 
 ## Release Pass
 
 - Package zip launches from a clean folder.
+- Inno Setup installer launches from Start Menu after install.
+- Optional desktop shortcut launches when selected during install.
 - `tetris_settings.txt`, `tetris_highscore.txt`, and `tetris_leaderboard.txt`
   are created beside `main.exe` after play.

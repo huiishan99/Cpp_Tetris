@@ -26,6 +26,22 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Refresh Windows playtest checklist
+
+- Changed: Updated `docs/WINDOWS_PLAYTEST.md` for menus, tuning presets,
+  control schemes, window scaling, volume, B2B, perfect clear, and installer
+  checks.
+- Why: Keep the manual Windows QA pass aligned with the newer gameplay,
+  settings, audio, and release flows.
+- Risk: Documentation-only change.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp
+  src/settings_options.cpp src/sound.cpp -o /private/tmp/tetris_core_tests`
+  and ran `/private/tmp/tetris_core_tests`; all core tests passed.
+- Follow-ups: Fill the checklist with actual pass/fail notes after the next
+  Windows run.
+
 ### 2026-05-25 - Add Windows installer script
 
 - Changed: Added an Inno Setup installer script, installer build notes, release
