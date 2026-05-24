@@ -87,6 +87,10 @@ That creates `dist\tetris-win-<version>.zip` and
 and runtime DLLs beside the executable. You only need to rebuild or repackage
 after changing the source.
 
+For an installer build, run `package.bat` first, then build
+`installer\tetris.iss` with Inno Setup 6. The output is
+`dist\tetris-setup-<version>.exe`.
+
 Or build directly with MinGW-w64:
 
 ```powershell

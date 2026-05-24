@@ -26,6 +26,23 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Add Windows installer script
+
+- Changed: Added an Inno Setup installer script, installer build notes, release
+  checklist installer steps, and README packaging instructions.
+- Why: Let the project ship as a normal Windows installer after `package.bat`
+  creates the release folder.
+- Risk: The installer script targets Windows and Inno Setup 6, so it cannot be
+  compiled in this macOS environment.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp
+  src/settings_options.cpp src/sound.cpp -o /private/tmp/tetris_core_tests`
+  and ran `/private/tmp/tetris_core_tests`; all core tests passed. Inno Setup
+  installer build still needs Windows verification.
+- Follow-ups: Build `dist\tetris-setup-0.9.0.exe` on Windows and add its hash
+  to release notes.
+
 ### 2026-05-25 - Add B2B and perfect clear sound cues
 
 - Changed: Added dedicated B2B and perfect clear sound cue functions, triggered

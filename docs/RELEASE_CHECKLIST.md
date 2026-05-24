@@ -9,6 +9,8 @@ Use this before sharing a Windows build.
 - Confirm `dist\tetris-win-<version>.zip` exists.
 - Confirm `dist\tetris-win-latest.zip` exists.
 - Confirm `SHA256SUMS.txt` contains the release zip hash.
+- Optional: build `installer\tetris.iss` with Inno Setup and confirm
+  `dist\tetris-setup-<version>.exe` exists.
 
 ## Package Contents
 
@@ -19,6 +21,13 @@ Use this before sharing a Windows build.
 - `ROADMAP.md`
 - `Font\monogram.ttf`
 - Runtime DLLs from `lib\` when present
+
+## Installer
+
+- Install from `dist\tetris-setup-<version>.exe`.
+- Launch from the Start Menu shortcut.
+- Confirm optional desktop shortcut works when selected.
+- Uninstall from Windows Apps & Features.
 
 ## Smoke Test
 
