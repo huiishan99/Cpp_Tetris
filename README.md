@@ -21,7 +21,7 @@ score, and a dark pixel UI.
 - Local top-five leaderboard with name entry on qualifying scores
 - In-game tuning presets for DAS, ARR, clear effect speed, controls, window scale, and sound
 - Pixel-style font with compact Win32 rendering
-- Layered sound cues for moves, drops, hold, rotate, clears, spins, level-up, pause, and game over
+- Layered sound cues for moves, drops, hold, rotate, clears, spins, B2B, perfect clear, level-up, pause, and game over
 
 ## Controls
 

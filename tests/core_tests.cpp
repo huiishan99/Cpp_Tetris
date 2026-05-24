@@ -391,6 +391,8 @@ void TestSoundCueCallsAreSafe()
     PlayLineClearSound(1, false);
     PlayLineClearSound(4, false);
     PlayLineClearSound(1, true);
+    PlayBackToBackSound();
+    PlayPerfectClearSound();
     PlayLevelUpSound();
     PlayPauseSound();
     PlayGameOverSound();

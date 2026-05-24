@@ -26,6 +26,23 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Add B2B and perfect clear sound cues
+
+- Changed: Added dedicated B2B and perfect clear sound cue functions, triggered
+  them from line-clear scoring, updated README sound notes, and covered the new
+  cue calls in core tests.
+- Why: Give advanced clears a stronger payoff and make the newer scoring
+  states easier to notice while playing.
+- Risk: Extra beep sequences can make special clears feel longer on Windows;
+  timing should be checked during the next playtest.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp
+  src/settings_options.cpp src/sound.cpp -o /private/tmp/tetris_core_tests`
+  and ran `/private/tmp/tetris_core_tests`; all core tests passed.
+- Follow-ups: Replace blocking `Beep` cues with real asynchronous audio if the
+  Windows build feels delayed.
+
 ### 2026-05-25 - Extract settings option helpers
 
 - Changed: Added `src/settings_options.h/.cpp` for tuning preset and control

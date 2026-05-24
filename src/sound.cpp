@@ -162,6 +162,29 @@ void PlayLineClearSound(int completedLines, bool spinClear)
     }
 }
 
+void PlayBackToBackSound()
+{
+    if (!soundEnabled)
+    {
+        return;
+    }
+    PlayTone(988, 18);
+    PlayTone(1175, 22);
+    PlayTone(1319, 34);
+}
+
+void PlayPerfectClearSound()
+{
+    if (!soundEnabled)
+    {
+        return;
+    }
+    PlayTone(784, 24);
+    PlayTone(988, 24);
+    PlayTone(1175, 28);
+    PlayTone(1568, 62);
+}
+
 void PlayLevelUpSound()
 {
     if (!soundEnabled)

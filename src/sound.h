@@ -6,6 +6,8 @@ void PlayHardDropSound();
 void PlayHoldSound();
 void PlayRotateSound();
 void PlayLineClearSound(int completedLines, bool spinClear);
+void PlayBackToBackSound();
+void PlayPerfectClearSound();
 void PlayLevelUpSound();
 void PlayPauseSound();
 void PlayGameOverSound();
