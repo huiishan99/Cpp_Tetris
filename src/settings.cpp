@@ -1,5 +1,7 @@
 #include "settings.h"
 
+#include "leaderboard.h"
+
 #include <fstream>
 #include <sstream>
 
@@ -38,6 +40,7 @@ GameSettings GetDefaultSettings()
         SettingsDefaultArrIntervalMs,
         SettingsDefaultClearFlashDurationMs,
         true,
+        DefaultLeaderboardName,
     };
 }
 
@@ -49,6 +52,7 @@ GameSettings SanitizeSettings(const GameSettings &settings)
     sanitized.clearFlashDurationMs = Clamp(sanitized.clearFlashDurationMs,
                                            SettingsMinClearFlashDurationMs,
                                            SettingsMaxClearFlashDurationMs);
+    sanitized.playerName = NormalizeLeaderboardName(sanitized.playerName);
     return sanitized;
 }
 
@@ -72,6 +76,12 @@ GameSettings LoadSettings(const std::string &path)
 
         std::string key = line.substr(0, separator);
         std::string valueText = line.substr(separator + 1);
+        if (key == "player_name")
+        {
+            settings.playerName = valueText;
+            continue;
+        }
+
         int value = 0;
         if (!TryParseInt(valueText, value))
         {
@@ -112,5 +122,6 @@ bool SaveSettings(const std::string &path, const GameSettings &settings)
     file << "arr_interval_ms=" << sanitized.arrIntervalMs << '\n';
     file << "clear_flash_ms=" << sanitized.clearFlashDurationMs << '\n';
     file << "sound_enabled=" << (sanitized.soundEnabled ? 1 : 0) << '\n';
+    file << "player_name=" << sanitized.playerName << '\n';
     return static_cast<bool>(file);
 }

@@ -399,12 +399,14 @@ void TestSettingsDefaultsAndPersistence()
     Expect(defaults.arrIntervalMs == SettingsDefaultArrIntervalMs, "missing settings file uses default ARR");
     Expect(defaults.clearFlashDurationMs == SettingsDefaultClearFlashDurationMs, "missing settings file uses default clear flash");
     Expect(defaults.soundEnabled, "missing settings file enables sound by default");
+    Expect(defaults.playerName == DefaultLeaderboardName, "missing settings file uses default player name");
 
     GameSettings settings{
         120,
         25,
         110,
         false,
+        "neo7",
     };
     Expect(SaveSettings(path, settings), "settings file saves successfully");
 
@@ -413,6 +415,7 @@ void TestSettingsDefaultsAndPersistence()
     Expect(loaded.arrIntervalMs == 25, "saved ARR loads successfully");
     Expect(loaded.clearFlashDurationMs == 110, "saved clear flash loads successfully");
     Expect(!loaded.soundEnabled, "saved sound flag loads successfully");
+    Expect(loaded.playerName == "NEO7", "saved player name loads normalized");
 
     std::remove(path);
 }
@@ -424,12 +427,14 @@ void TestSettingsSanitizeInvalidValues()
         999,
         20,
         true,
+        "bad-name!!!",
     };
 
     GameSettings sanitized = SanitizeSettings(settings);
     Expect(sanitized.dasDelayMs == SettingsMinDasDelayMs, "DAS setting clamps to minimum");
     Expect(sanitized.arrIntervalMs == SettingsMaxArrIntervalMs, "ARR setting clamps to maximum");
     Expect(sanitized.clearFlashDurationMs == SettingsMinClearFlashDurationMs, "clear flash setting clamps to minimum");
+    Expect(sanitized.playerName == "BADNAME", "player name setting removes unsupported characters");
 }
 
 void TestLeaderboardSortsAndLimitsEntries()
@@ -479,6 +484,7 @@ void TestLeaderboardQualificationAndNameNormalization()
     Expect(!DoesScoreQualifyForLeaderboard(entries, 0), "zero score does not qualify");
     Expect(DoesScoreQualifyForLeaderboard({{"AAA", 500}}, 10), "positive score qualifies when leaderboard has room");
     Expect(NormalizeLeaderboardName("") == DefaultLeaderboardName, "empty leaderboard name uses the default");
+    Expect(NormalizeLeaderboardName("a b-12") == "AB12", "leaderboard name keeps uppercase letters and digits");
     Expect(NormalizeLeaderboardName("ABCDEFGHIJKLMNO") == "ABCDEFGHIJKL", "long leaderboard name is trimmed");
 }
 

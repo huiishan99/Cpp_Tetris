@@ -31,6 +31,7 @@ enum SettingsOption
     SettingsDasDelay = 0,
     SettingsArrInterval,
     SettingsClearFlash,
+    SettingsPlayerName,
     SettingsSound,
     SettingsOptionCount
 };
@@ -47,10 +48,12 @@ int clearFlashDurationMs = SettingsDefaultClearFlashDurationMs;
 int dasDelayMs = SettingsDefaultDasDelayMs;
 int arrIntervalMs = SettingsDefaultArrIntervalMs;
 int selectedSettingIndex = 0;
+std::string defaultPlayerName = DefaultLeaderboardName;
 bool pixelFontLoaded = false;
 bool lockDelayTimerRunning = false;
 bool inputTimerRunning = false;
 bool settingsOpen = false;
+bool settingsNameEditActive = false;
 bool gameOverScoreRecorded = false;
 bool leaderboardNameEntryActive = false;
 bool leftHeld = false;
@@ -59,6 +62,7 @@ int horizontalDirection = 0;
 int pendingLeaderboardScore = 0;
 DWORD horizontalHeldStartedAt = 0;
 DWORD lastHorizontalRepeatAt = 0;
+std::string settingsNameDraft;
 std::string leaderboardNameInput;
 
 const char *GetGameFontName()
@@ -160,6 +164,7 @@ void ApplyRuntimeSettings(const GameSettings &settings)
     dasDelayMs = sanitized.dasDelayMs;
     arrIntervalMs = sanitized.arrIntervalMs;
     clearFlashDurationMs = sanitized.clearFlashDurationMs;
+    defaultPlayerName = NormalizeLeaderboardName(sanitized.playerName);
     SetSoundEnabled(sanitized.soundEnabled);
 }
 
@@ -170,6 +175,7 @@ GameSettings CollectRuntimeSettings()
         arrIntervalMs,
         clearFlashDurationMs,
         IsSoundEnabled(),
+        defaultPlayerName,
     });
 }
 
@@ -197,7 +203,7 @@ void RecordGameOverScoreIfNeeded()
     }
 
     pendingLeaderboardScore = score;
-    leaderboardNameInput.clear();
+    leaderboardNameInput = defaultPlayerName;
     leaderboardNameEntryActive = true;
     leftHeld = false;
     rightHeld = false;
@@ -697,6 +703,8 @@ std::string GetSettingLabel(int index)
         return "ARR";
     case SettingsClearFlash:
         return "CLEAR FX";
+    case SettingsPlayerName:
+        return "NAME";
     case SettingsSound:
         return "SOUND";
     default:
@@ -714,6 +722,8 @@ std::string GetSettingValue(int index)
         return std::to_string(arrIntervalMs) + " ms";
     case SettingsClearFlash:
         return std::to_string(clearFlashDurationMs) + " ms";
+    case SettingsPlayerName:
+        return settingsNameEditActive ? settingsNameDraft + "_" : defaultPlayerName;
     case SettingsSound:
         return IsSoundEnabled() ? "ON" : "OFF";
     default:
@@ -747,7 +757,10 @@ void DrawSettingsRow(HDC hdc, int index, int top)
 
     FillRoundRectColor(hdc, left, top, right, top + 48, 8, fill, accent);
     DrawTextLine(hdc, left + 18, top + 12, GetSettingLabel(index), 20, labelColor, FW_BOLD);
-    DrawTextLine(hdc, right - 122, top + 12, GetSettingValue(index), 20, valueColor, FW_BOLD);
+    if (index != SettingsPlayerName)
+    {
+        DrawTextLine(hdc, right - 122, top + 12, GetSettingValue(index), 20, valueColor, FW_BOLD);
+    }
 
     if (index == SettingsDasDelay)
     {
@@ -763,6 +776,14 @@ void DrawSettingsRow(HDC hdc, int index, int top)
     {
         DrawSettingMeter(hdc, left + 160, top + 31, 160, clearFlashDurationMs,
                          SettingsMinClearFlashDurationMs, SettingsMaxClearFlashDurationMs, accent);
+    }
+    else if (index == SettingsPlayerName)
+    {
+        int inputLeft = left + 160;
+        COLORREF inputBorder = settingsNameEditActive ? RGB(123, 205, 236) : RGB(86, 98, 88);
+        FillRoundRectColor(hdc, inputLeft, top + 10, inputLeft + 170, top + 38, 8,
+                           RGB(18, 22, 22), inputBorder);
+        DrawTextLine(hdc, inputLeft + 12, top + 13, GetSettingValue(index), 18, valueColor, FW_BOLD);
     }
     else
     {
@@ -786,7 +807,7 @@ void DrawSettingsOverlay(HDC hdc)
     const int left = BOARD_LEFT + 34;
     const int right = WINDOW_WIDTH - 34;
     const int top = BOARD_TOP + 104;
-    const int bottom = BOARD_TOP + 428;
+    const int bottom = BOARD_TOP + 500;
 
     FillRoundRectColor(hdc, left + 6, top + 8, right + 6, bottom + 8, 12,
                        RGB(9, 11, 11), RGB(9, 11, 11));
@@ -998,6 +1019,8 @@ void ResetHorizontalInput(HWND hwnd)
 void ToggleSettings(HWND hwnd)
 {
     settingsOpen = !settingsOpen;
+    settingsNameEditActive = false;
+    settingsNameDraft.clear();
     ResetHorizontalInput(hwnd);
 
     if (settingsOpen)
@@ -1039,8 +1062,71 @@ void AdjustSelectedSetting(int direction)
     }
 }
 
+void StartSettingsNameEdit()
+{
+    settingsNameDraft = defaultPlayerName;
+    settingsNameEditActive = true;
+}
+
+void CommitSettingsNameEdit()
+{
+    if (static_cast<int>(settingsNameDraft.size()) >= LeaderboardMinNameLength)
+    {
+        defaultPlayerName = NormalizeLeaderboardName(settingsNameDraft);
+        settingsNameEditActive = false;
+        settingsNameDraft.clear();
+    }
+}
+
+void CancelSettingsNameEdit()
+{
+    settingsNameEditActive = false;
+    settingsNameDraft.clear();
+}
+
+void HandleSettingsNameEditKey(WPARAM key)
+{
+    if (key == VK_ESCAPE)
+    {
+        CancelSettingsNameEdit();
+        return;
+    }
+
+    if (key == VK_BACK)
+    {
+        if (!settingsNameDraft.empty())
+        {
+            settingsNameDraft.pop_back();
+        }
+        return;
+    }
+
+    if (key == VK_RETURN)
+    {
+        CommitSettingsNameEdit();
+        return;
+    }
+
+    if (static_cast<int>(settingsNameDraft.size()) >= LeaderboardMaxNameLength)
+    {
+        return;
+    }
+
+    if ((key >= 'A' && key <= 'Z') || (key >= '0' && key <= '9'))
+    {
+        settingsNameDraft.push_back(static_cast<char>(key));
+    }
+}
+
 void HandleSettingsKey(HWND hwnd, WPARAM key)
 {
+    if (settingsNameEditActive)
+    {
+        HandleSettingsNameEditKey(key);
+        InvalidateRect(hwnd, nullptr, FALSE);
+        return;
+    }
+
     switch (key)
     {
     case VK_ESCAPE:
@@ -1060,7 +1146,11 @@ void HandleSettingsKey(HWND hwnd, WPARAM key)
         break;
     case VK_RETURN:
     case VK_SPACE:
-        if (selectedSettingIndex == SettingsSound)
+        if (selectedSettingIndex == SettingsPlayerName)
+        {
+            StartSettingsNameEdit();
+        }
+        else if (selectedSettingIndex == SettingsSound)
         {
             AdjustSelectedSetting(1);
         }
@@ -1081,7 +1171,7 @@ void HandleLeaderboardNameKey(HWND hwnd, WPARAM key)
 
     if (key == VK_ESCAPE)
     {
-        SubmitLeaderboardName(DefaultLeaderboardName);
+        SubmitLeaderboardName(defaultPlayerName);
         InvalidateRect(hwnd, nullptr, FALSE);
         return;
     }

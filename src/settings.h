@@ -18,6 +18,7 @@ struct GameSettings
     int arrIntervalMs;
     int clearFlashDurationMs;
     bool soundEnabled;
+    std::string playerName;
 };
 
 GameSettings GetDefaultSettings();

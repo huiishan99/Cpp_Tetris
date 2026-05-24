@@ -26,6 +26,27 @@ specific edits.
 
 ## Entries
 
+### 2026-05-24 - Add default player name setting
+
+- Changed: Added `player_name` to the persisted settings file, normalized
+  leaderboard names to uppercase letters and digits, added a `NAME` row to the
+  F1 settings overlay, and prefilled qualifying game-over name entry with the
+  saved default player name. Esc on the leaderboard name-entry overlay now
+  saves using the default player name instead of always using `PLAYER`.
+  Updated README, roadmap, and core tests.
+- Why: Reduce repeated typing for leaderboard entries and make saved scores
+  feel more personal.
+- Risk: The settings overlay grew by one row and needs Windows visual
+  playtesting. Name editing still accepts only uppercase letters and digits.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp src/sound.cpp -o
+  /private/tmp/tetris_core_tests` and ran `/private/tmp/tetris_core_tests`;
+  all core tests passed. Windows GUI playtesting was not available in this
+  macOS environment.
+- Follow-ups: Confirm the larger settings overlay on Windows and consider
+  allowing a wider set of name characters later.
+
 ### 2026-05-24 - Enhance sound cues
 
 - Changed: Reworked the Windows beep cues into short layered tone sequences

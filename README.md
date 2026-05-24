@@ -38,10 +38,11 @@ score, and a dark pixel UI.
 | R | Restart |
 | Q | Quit |
 
-Inside settings, use Up / Down to choose a row, Left / Right to adjust it, and
-Esc or F1 to close the panel. Settings are saved to `tetris_settings.txt`.
+Inside settings, use Up / Down to choose a row, Left / Right to adjust numeric
+values, Enter to edit `NAME`, and Esc or F1 to close the panel. Settings are
+saved to `tetris_settings.txt`.
 When a game-over score reaches the local leaderboard, type a 3-12 character
-name and press Enter, or press Esc to save it as `PLAYER`.
+name and press Enter, or press Esc to save it under the default player name.
 
 ## Scoring
 

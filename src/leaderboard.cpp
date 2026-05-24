@@ -1,6 +1,7 @@
 #include "leaderboard.h"
 
 #include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <sstream>
 
@@ -21,11 +22,30 @@ bool TryParseInt(const std::string &text, int &value)
 
 std::string NormalizeLeaderboardName(const std::string &name)
 {
-    if (name.empty())
+    std::string normalized;
+    for (char character : name)
+    {
+        unsigned char value = static_cast<unsigned char>(character);
+        if (std::islower(value))
+        {
+            character = static_cast<char>(std::toupper(value));
+        }
+
+        if ((character >= 'A' && character <= 'Z') || (character >= '0' && character <= '9'))
+        {
+            normalized.push_back(character);
+            if (static_cast<int>(normalized.size()) == LeaderboardMaxNameLength)
+            {
+                break;
+            }
+        }
+    }
+
+    if (normalized.empty())
     {
         return DefaultLeaderboardName;
     }
-    return name.substr(0, LeaderboardMaxNameLength);
+    return normalized;
 }
 
 std::vector<LeaderboardEntry> NormalizeLeaderboard(const std::vector<LeaderboardEntry> &entries,
