@@ -17,7 +17,7 @@ score, and a dark pixel UI.
 - Clockwise and counter-clockwise SRS-style wall kicks for cleaner rotations
 - T-spin scoring plus custom L/J/I/S/Z style-spin clears
 - Faster line-clear flash, combo feedback, level-up feedback, and best score
-- Start, pause, restart, and game-over overlays
+- Main menu, pause menu, restart, leaderboard view, and game-over overlays
 - Local top-five leaderboard with name entry on qualifying scores
 - In-game tuning for DAS, ARR, clear effect speed, and sound
 - Pixel-style font with compact Win32 rendering
@@ -27,7 +27,8 @@ score, and a dark pixel UI.
 
 | Key | Action |
 | --- | --- |
-| Any key on READY | Start |
+| Up / Down or W / S in menus | Choose menu item |
+| Enter / Space in menus | Select menu item |
 | Left / Right or A / D | Move, hold to slide |
 | Down or S | Soft drop |
 | Up / W / X | Rotate clockwise |
@@ -36,7 +37,7 @@ score, and a dark pixel UI.
 | C or Shift | Hold |
 | P or Esc | Pause |
 | F1 | Settings |
-| Any key while paused | Resume |
+| Space while paused | Continue from pause menu |
 | R | Restart |
 | Q | Quit |
 

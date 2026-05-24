@@ -18,6 +18,25 @@ enum SettingsOption
     SettingsOptionCount
 };
 
+enum MainMenuOption
+{
+    MainMenuStart = 0,
+    MainMenuSettings,
+    MainMenuLeaderboard,
+    MainMenuQuit,
+    MainMenuOptionCount
+};
+
+enum PauseMenuOption
+{
+    PauseMenuContinue = 0,
+    PauseMenuRestart,
+    PauseMenuSettings,
+    PauseMenuLeaderboard,
+    PauseMenuQuit,
+    PauseMenuOptionCount
+};
+
 Game game;
 std::vector<LeaderboardEntry> leaderboard;
 int observedClearEventId = 0;
@@ -30,12 +49,15 @@ int clearFlashDurationMs = SettingsDefaultClearFlashDurationMs;
 int dasDelayMs = SettingsDefaultDasDelayMs;
 int arrIntervalMs = SettingsDefaultArrIntervalMs;
 int selectedSettingIndex = 0;
+int selectedMainMenuIndex = MainMenuStart;
+int selectedPauseMenuIndex = PauseMenuContinue;
 std::string defaultPlayerName = DefaultLeaderboardName;
 bool pixelFontLoaded = false;
 bool lockDelayTimerRunning = false;
 bool inputTimerRunning = false;
 bool settingsOpen = false;
 bool settingsNameEditActive = false;
+bool leaderboardOpen = false;
 bool gameOverScoreRecorded = false;
 bool leaderboardNameEntryActive = false;
 bool leftHeld = false;
@@ -584,6 +606,104 @@ void DrawOverlayPanel(HDC hdc, const std::string &title, const std::string &acti
     DrawTextCentered(hdc, left, right, top + 138, detail, 17, RGB(170, 178, 158), FW_NORMAL);
 }
 
+void DrawMenuItem(HDC hdc, int left, int right, int top, const std::string &label, bool selected)
+{
+    COLORREF border = selected ? RGB(249, 214, 124) : RGB(66, 76, 66);
+    COLORREF fill = selected ? RGB(47, 49, 39) : RGB(26, 31, 31);
+    COLORREF text = selected ? RGB(248, 244, 225) : RGB(178, 187, 168);
+    FillRoundRectColor(hdc, left, top, right, top + 42, 8, fill, border);
+    if (selected)
+    {
+        FillRectColor(hdc, left + 12, top + 12, left + 16, top + 30, RGB(249, 214, 124));
+    }
+    DrawTextCentered(hdc, left, right, top + 10, label, 20, text, selected ? FW_BOLD : FW_NORMAL);
+}
+
+void DrawMenuPanel(HDC hdc, const std::string &title, const std::vector<std::string> &items,
+                   int selectedIndex, COLORREF accent)
+{
+    int left = AppConfig::BoardLeft + 18;
+    int right = AppConfig::BoardLeft + AppConfig::CellSize * 10 - 18;
+    int top = AppConfig::BoardTop + 90;
+    int bottom = AppConfig::BoardTop + 466;
+
+    FillRoundRectColor(hdc, left + 5, top + 7, right + 5, bottom + 7, 12,
+                       RGB(10, 12, 12), RGB(10, 12, 12));
+    FillRoundRectColor(hdc, left, top, right, bottom, 12,
+                       RGB(28, 34, 34), AdjustColor(accent, -65));
+    FillRectColor(hdc, left + 18, top + 16, right - 18, top + 20, accent);
+    DrawTextCentered(hdc, left, right, top + 42, title, 34, RGB(248, 244, 225), FW_BOLD);
+
+    int itemTop = top + 102;
+    for (int index = 0; index < static_cast<int>(items.size()); index++)
+    {
+        DrawMenuItem(hdc, left + 34, right - 34, itemTop + index * 52,
+                     items[index], selectedIndex == index);
+    }
+}
+
+void DrawMainMenuOverlay(HDC hdc)
+{
+    DrawMenuPanel(hdc, "TETRIS",
+                  {"START", "SETTINGS", "LEADERBOARD", "QUIT"},
+                  selectedMainMenuIndex, RGB(249, 214, 124));
+}
+
+void DrawPauseMenuOverlay(HDC hdc)
+{
+    DrawMenuPanel(hdc, "PAUSED",
+                  {"CONTINUE", "RESTART", "SETTINGS", "LEADERBOARD", "QUIT"},
+                  selectedPauseMenuIndex, RGB(241, 194, 100));
+}
+
+void DrawLeaderboardOverlay(HDC hdc)
+{
+    int left = AppConfig::BoardLeft + 18;
+    int right = AppConfig::BoardLeft + AppConfig::CellSize * 10 - 18;
+    int top = AppConfig::BoardTop + 104;
+    int bottom = AppConfig::BoardTop + 484;
+    COLORREF accent = RGB(123, 205, 236);
+
+    FillRoundRectColor(hdc, left + 5, top + 7, right + 5, bottom + 7, 12,
+                       RGB(10, 12, 12), RGB(10, 12, 12));
+    FillRoundRectColor(hdc, left, top, right, bottom, 12,
+                       RGB(25, 31, 32), AdjustColor(accent, -65));
+    FillRectColor(hdc, left + 18, top + 16, right - 18, top + 20, accent);
+    DrawTextCentered(hdc, left, right, top + 42, "LEADERBOARD", 30, RGB(248, 244, 225), FW_BOLD);
+
+    std::vector<LeaderboardEntry> ranked = NormalizeLeaderboard(leaderboard);
+    int rowsToDraw = static_cast<int>(ranked.size());
+    if (rowsToDraw > LeaderboardMaxEntries)
+    {
+        rowsToDraw = LeaderboardMaxEntries;
+    }
+
+    if (rowsToDraw == 0)
+    {
+        DrawTextCentered(hdc, left, right, top + 152, "NO SCORES YET", 20,
+                         RGB(132, 142, 126), FW_NORMAL);
+    }
+    else
+    {
+        for (int index = 0; index < rowsToDraw; index++)
+        {
+            int rowTop = top + 104 + index * 42;
+            COLORREF rowFill = index == 0 ? RGB(47, 49, 39) : RGB(29, 34, 34);
+            COLORREF rowBorder = index == 0 ? RGB(249, 214, 124) : RGB(66, 76, 66);
+            FillRoundRectColor(hdc, left + 34, rowTop, right - 34, rowTop + 34, 8,
+                               rowFill, rowBorder);
+            DrawTextLine(hdc, left + 50, rowTop + 8, std::to_string(index + 1) + ".",
+                         17, RGB(123, 205, 236), FW_BOLD);
+            DrawTextLine(hdc, left + 90, rowTop + 8, ranked[index].name,
+                         17, RGB(248, 244, 225), FW_BOLD);
+            DrawTextLine(hdc, right - 122, rowTop + 8, std::to_string(ranked[index].score),
+                         17, RGB(249, 214, 124), FW_BOLD);
+        }
+    }
+
+    DrawMenuItem(hdc, left + 52, right - 52, bottom - 64, "BACK", true);
+}
+
 void DrawGameOverOverlay(HDC hdc)
 {
     int left = AppConfig::BoardLeft + 18;
@@ -657,21 +777,21 @@ void DrawGameOverOverlay(HDC hdc)
 
 void DrawStateOverlay(HDC hdc)
 {
-    if (game.IsGameOver())
+    if (leaderboardOpen)
+    {
+        DrawLeaderboardOverlay(hdc);
+    }
+    else if (game.IsGameOver())
     {
         DrawGameOverOverlay(hdc);
     }
     else if (!game.IsStarted())
     {
-        DrawOverlayPanel(hdc, "READY", "PRESS ANY KEY",
-                         "Best " + std::to_string(game.GetHighScore()),
-                         RGB(249, 214, 124));
+        DrawMainMenuOverlay(hdc);
     }
     else if (game.IsPaused())
     {
-        DrawOverlayPanel(hdc, "PAUSED", "PRESS ANY KEY",
-                         "R restarts   Score " + std::to_string(game.GetScore()),
-                         RGB(241, 194, 100));
+        DrawPauseMenuOverlay(hdc);
     }
 }
 
@@ -998,8 +1118,86 @@ void ResetHorizontalInput(HWND hwnd)
     StopHorizontalInputTimer(hwnd);
 }
 
+void ResetRunUiState(HWND hwnd)
+{
+    observedClearEventId = 0;
+    observedLevelUpEventId = 0;
+    observedLockDelayEventId = 0;
+    clearFlashStartedAt = 0;
+    levelFlashStartedAt = 0;
+    lockDelayStartedAt = 0;
+    leaderboardNameEntryActive = false;
+    gameOverScoreRecorded = false;
+    pendingLeaderboardScore = 0;
+    leaderboardNameInput.clear();
+    KillTimer(hwnd, AppConfig::ClearFlashTimerId);
+    KillTimer(hwnd, AppConfig::LevelFlashTimerId);
+    KillTimer(hwnd, AppConfig::LockDelayTimerId);
+    lockDelayTimerRunning = false;
+    ResetHorizontalInput(hwnd);
+}
+
+void StartDropTimer(HWND hwnd)
+{
+    KillTimer(hwnd, AppConfig::DropTimerId);
+    SetTimer(hwnd, AppConfig::DropTimerId, game.GetDropIntervalMs(), nullptr);
+}
+
+void StartGameFromMenu(HWND hwnd)
+{
+    leaderboardOpen = false;
+    settingsOpen = false;
+    settingsNameEditActive = false;
+    game.Start();
+    ResetRunUiState(hwnd);
+    StartDropTimer(hwnd);
+    InvalidateRect(hwnd, nullptr, FALSE);
+}
+
+void RestartGameFromMenu(HWND hwnd)
+{
+    leaderboardOpen = false;
+    settingsOpen = false;
+    settingsNameEditActive = false;
+    game.Restart();
+    ResetRunUiState(hwnd);
+    StartDropTimer(hwnd);
+    InvalidateRect(hwnd, nullptr, FALSE);
+}
+
+void ResumeGameFromMenu(HWND hwnd)
+{
+    leaderboardOpen = false;
+    if (game.IsPaused())
+    {
+        game.HandleInput('p');
+    }
+    UpdateLockDelay(hwnd);
+    if (!game.IsLineClearPending() && !game.IsLockDelayActive())
+    {
+        StartDropTimer(hwnd);
+    }
+    InvalidateRect(hwnd, nullptr, FALSE);
+}
+
+void OpenLeaderboard(HWND hwnd)
+{
+    leaderboardOpen = true;
+    settingsOpen = false;
+    settingsNameEditActive = false;
+    ResetHorizontalInput(hwnd);
+    InvalidateRect(hwnd, nullptr, FALSE);
+}
+
+void CloseLeaderboard(HWND hwnd)
+{
+    leaderboardOpen = false;
+    InvalidateRect(hwnd, nullptr, FALSE);
+}
+
 void ToggleSettings(HWND hwnd)
 {
+    leaderboardOpen = false;
     settingsOpen = !settingsOpen;
     settingsNameEditActive = false;
     settingsNameDraft.clear();
@@ -1142,6 +1340,115 @@ void HandleSettingsKey(HWND hwnd, WPARAM key)
     }
 
     InvalidateRect(hwnd, nullptr, FALSE);
+}
+
+void ActivateMainMenuSelection(HWND hwnd)
+{
+    switch (selectedMainMenuIndex)
+    {
+    case MainMenuStart:
+        StartGameFromMenu(hwnd);
+        break;
+    case MainMenuSettings:
+        ToggleSettings(hwnd);
+        break;
+    case MainMenuLeaderboard:
+        OpenLeaderboard(hwnd);
+        break;
+    case MainMenuQuit:
+        PostQuitMessage(0);
+        break;
+    default:
+        break;
+    }
+}
+
+void ActivatePauseMenuSelection(HWND hwnd)
+{
+    switch (selectedPauseMenuIndex)
+    {
+    case PauseMenuContinue:
+        ResumeGameFromMenu(hwnd);
+        break;
+    case PauseMenuRestart:
+        RestartGameFromMenu(hwnd);
+        break;
+    case PauseMenuSettings:
+        ToggleSettings(hwnd);
+        break;
+    case PauseMenuLeaderboard:
+        OpenLeaderboard(hwnd);
+        break;
+    case PauseMenuQuit:
+        PostQuitMessage(0);
+        break;
+    default:
+        break;
+    }
+}
+
+void HandleMainMenuKey(HWND hwnd, WPARAM key)
+{
+    switch (key)
+    {
+    case VK_UP:
+    case 'W':
+        selectedMainMenuIndex = (selectedMainMenuIndex + MainMenuOptionCount - 1) % MainMenuOptionCount;
+        break;
+    case VK_DOWN:
+    case 'S':
+        selectedMainMenuIndex = (selectedMainMenuIndex + 1) % MainMenuOptionCount;
+        break;
+    case VK_RETURN:
+    case VK_SPACE:
+        ActivateMainMenuSelection(hwnd);
+        return;
+    case VK_ESCAPE:
+        PostQuitMessage(0);
+        return;
+    default:
+        break;
+    }
+
+    InvalidateRect(hwnd, nullptr, FALSE);
+}
+
+void HandlePauseMenuKey(HWND hwnd, WPARAM key)
+{
+    switch (key)
+    {
+    case VK_UP:
+    case 'W':
+        selectedPauseMenuIndex = (selectedPauseMenuIndex + PauseMenuOptionCount - 1) % PauseMenuOptionCount;
+        break;
+    case VK_DOWN:
+    case 'S':
+        selectedPauseMenuIndex = (selectedPauseMenuIndex + 1) % PauseMenuOptionCount;
+        break;
+    case VK_RETURN:
+    case VK_SPACE:
+        ActivatePauseMenuSelection(hwnd);
+        return;
+    case VK_ESCAPE:
+    case 'P':
+        ResumeGameFromMenu(hwnd);
+        return;
+    case 'R':
+        RestartGameFromMenu(hwnd);
+        return;
+    default:
+        break;
+    }
+
+    InvalidateRect(hwnd, nullptr, FALSE);
+}
+
+void HandleLeaderboardPanelKey(HWND hwnd, WPARAM key)
+{
+    if (key == VK_ESCAPE || key == VK_RETURN || key == VK_SPACE || key == VK_BACK)
+    {
+        CloseLeaderboard(hwnd);
+    }
 }
 
 void HandleLeaderboardNameKey(HWND hwnd, WPARAM key)
@@ -1397,6 +1704,18 @@ void HandleGameKey(HWND hwnd, WPARAM key)
         return;
     }
 
+    if (game.IsGameOver())
+    {
+        RestartGameFromMenu(hwnd);
+        return;
+    }
+
+    if (key == 'R')
+    {
+        RestartGameFromMenu(hwnd);
+        return;
+    }
+
     int input = 0;
     switch (key)
     {
@@ -1429,7 +1748,6 @@ void HandleGameKey(HWND hwnd, WPARAM key)
     case 'X':
     case 'Z':
     case 'P':
-    case 'R':
         input = static_cast<int>(key);
         break;
     default:
@@ -1519,6 +1837,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             HandleLeaderboardNameKey(hwnd, wParam);
             return 0;
         }
+        if (leaderboardOpen)
+        {
+            HandleLeaderboardPanelKey(hwnd, wParam);
+            return 0;
+        }
         if (wParam == VK_F1)
         {
             ToggleSettings(hwnd);
@@ -1527,6 +1850,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         if (settingsOpen)
         {
             HandleSettingsKey(hwnd, wParam);
+            return 0;
+        }
+        if (!game.IsStarted())
+        {
+            HandleMainMenuKey(hwnd, wParam);
+            return 0;
+        }
+        if (game.IsPaused())
+        {
+            HandlePauseMenuKey(hwnd, wParam);
             return 0;
         }
         if (IsHorizontalMoveKey(wParam))

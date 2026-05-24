@@ -26,6 +26,24 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Add main and pause menus
+
+- Changed: Replaced the old ready/pause prompts with selectable main and pause
+  menus, added an in-game leaderboard panel, routed restart through a UI reset
+  helper, and updated README controls.
+- Why: Make the game feel like a complete playable app instead of a prototype
+  that starts from any random key press.
+- Risk: Win32 keyboard routing changed around start, pause, leaderboard, and
+  settings overlays. The portable core is unchanged, but the menu flow needs a
+  Windows smoke test.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp src/sound.cpp -o
+  /private/tmp/tetris_core_tests` and ran `/private/tmp/tetris_core_tests`;
+  all core tests passed. Win32 menu flow still needs a Windows smoke test.
+- Follow-ups: Add mouse support for menu items after Windows testing if the
+  keyboard menu feels good.
+
 ### 2026-05-25 - Centralize app configuration
 
 - Changed: Added `src/app_config.h` for Win32 window size, board layout, timer
