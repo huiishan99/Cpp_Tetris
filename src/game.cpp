@@ -973,7 +973,7 @@ void Game::StartLineClear(const std::vector<int> &fullRows)
     }
     lastClearedRows = fullRows;
     clearEventId++;
-    PlayLineClearSound();
+    PlayLineClearSound(rowsCleared, lastClearSpinBlockId != 0);
     UpdateScore(rowsCleared, 0, lastClearSpinBlockId);
 }
 

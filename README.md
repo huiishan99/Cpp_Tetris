@@ -19,7 +19,7 @@ score, and a dark pixel UI.
 - Local top-five leaderboard with name entry on qualifying scores
 - In-game tuning for DAS, ARR, clear effect speed, and sound
 - Pixel-style font with compact Win32 rendering
-- Lightweight sound cues for moves, drops, hold, rotate, clears, pause, and game over
+- Layered sound cues for moves, drops, hold, rotate, clears, spins, level-up, pause, and game over
 
 ## Controls
 

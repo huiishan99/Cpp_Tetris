@@ -7,6 +7,16 @@
 namespace
 {
 bool soundEnabled = true;
+
+void PlayTone(int frequency, int durationMs)
+{
+#ifdef _WIN32
+    Beep(frequency, durationMs);
+#else
+    (void)frequency;
+    (void)durationMs;
+#endif
+}
 }
 
 void SetSoundEnabled(bool enabled)
@@ -25,9 +35,7 @@ void PlayMoveSound()
     {
         return;
     }
-#ifdef _WIN32
-    Beep(440, 12);
-#endif
+    PlayTone(560, 8);
 }
 
 void PlaySoftDropSound()
@@ -36,9 +44,7 @@ void PlaySoftDropSound()
     {
         return;
     }
-#ifdef _WIN32
-    Beep(330, 10);
-#endif
+    PlayTone(370, 8);
 }
 
 void PlayHardDropSound()
@@ -47,9 +53,8 @@ void PlayHardDropSound()
     {
         return;
     }
-#ifdef _WIN32
-    Beep(220, 35);
-#endif
+    PlayTone(220, 18);
+    PlayTone(160, 38);
 }
 
 void PlayHoldSound()
@@ -58,9 +63,8 @@ void PlayHoldSound()
     {
         return;
     }
-#ifdef _WIN32
-    Beep(520, 25);
-#endif
+    PlayTone(520, 18);
+    PlayTone(660, 22);
 }
 
 void PlayRotateSound()
@@ -69,20 +73,49 @@ void PlayRotateSound()
     {
         return;
     }
-#ifdef _WIN32
-    Beep(880, 25);
-#endif
+    PlayTone(780, 14);
+    PlayTone(980, 12);
 }
 
-void PlayLineClearSound()
+void PlayLineClearSound(int completedLines, bool spinClear)
 {
     if (!soundEnabled)
     {
         return;
     }
-#ifdef _WIN32
-    Beep(660, 60);
-#endif
+
+    if (spinClear)
+    {
+        PlayTone(880, 28);
+        PlayTone(1175, 36);
+        PlayTone(1480, 48);
+        return;
+    }
+
+    switch (completedLines)
+    {
+    case 1:
+        PlayTone(660, 35);
+        break;
+    case 2:
+        PlayTone(660, 28);
+        PlayTone(784, 38);
+        break;
+    case 3:
+        PlayTone(660, 24);
+        PlayTone(784, 28);
+        PlayTone(988, 44);
+        break;
+    case 4:
+        PlayTone(523, 26);
+        PlayTone(659, 26);
+        PlayTone(784, 32);
+        PlayTone(1046, 58);
+        break;
+    default:
+        PlayTone(660, 35);
+        break;
+    }
 }
 
 void PlayLevelUpSound()
@@ -91,10 +124,9 @@ void PlayLevelUpSound()
     {
         return;
     }
-#ifdef _WIN32
-    Beep(740, 45);
-    Beep(980, 65);
-#endif
+    PlayTone(740, 34);
+    PlayTone(932, 34);
+    PlayTone(1175, 70);
 }
 
 void PlayPauseSound()
@@ -103,9 +135,8 @@ void PlayPauseSound()
     {
         return;
     }
-#ifdef _WIN32
-    Beep(500, 30);
-#endif
+    PlayTone(500, 18);
+    PlayTone(420, 20);
 }
 
 void PlayGameOverSound()
@@ -114,8 +145,7 @@ void PlayGameOverSound()
     {
         return;
     }
-#ifdef _WIN32
-    Beep(220, 70);
-    Beep(165, 110);
-#endif
+    PlayTone(330, 42);
+    PlayTone(247, 60);
+    PlayTone(165, 78);
 }

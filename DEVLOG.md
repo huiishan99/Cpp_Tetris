@@ -26,6 +26,27 @@ specific edits.
 
 ## Entries
 
+### 2026-05-24 - Enhance sound cues
+
+- Changed: Reworked the Windows beep cues into short layered tone sequences
+  for movement, soft drop, hard drop, hold, rotation, level-up, pause, and game
+  over. Line-clear audio now receives the cleared line count and whether the
+  clear was a spin, so singles/doubles/triples/Tetris and spin clears have
+  distinct cues. Added a sound API safety test and updated README and roadmap
+  notes.
+- Why: Make gameplay feedback feel more expressive without adding external
+  audio assets or changing the existing sound on/off setting.
+- Risk: The exact tone balance can only be judged on Windows speakers; macOS
+  core tests only verify that the sound API compiles and remains safe to call.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc tests/core_tests.cpp
+  src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp src/high_score.cpp
+  src/leaderboard.cpp src/position.cpp src/settings.cpp src/sound.cpp -o
+  /private/tmp/tetris_core_tests` and ran `/private/tmp/tetris_core_tests`;
+  all core tests passed. Windows audio playback was not available in this
+  macOS environment.
+- Follow-ups: Playtest on Windows and replace beep sequences with bundled
+  audio assets later if the project needs a fuller sound design.
+
 ### 2026-05-23 - Add leaderboard name entry
 
 - Changed: Added leaderboard qualification checks, public name normalization,

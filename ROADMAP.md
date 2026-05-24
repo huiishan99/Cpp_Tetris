@@ -8,6 +8,7 @@ These are the next polish tracks requested during the refresh work.
 - Persist settings between launches.
 - Local top-five leaderboard.
 - Leaderboard name entry for qualifying scores.
+- More expressive sound effects for movement, locks, spins, and level-ups.
 
 ## Next
 
@@ -15,4 +16,4 @@ These are the next polish tracks requested during the refresh work.
 - Gameplay screenshot or GIF for the README and release page.
 - Installer or richer release package after the zip flow is stable.
 - Add a default player name setting.
-- More expressive sound effects for movement, locks, spins, and level-ups.
+- Replace Beep cues with bundled audio assets if the game later needs richer sound design.

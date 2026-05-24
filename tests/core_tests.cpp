@@ -371,6 +371,24 @@ void TestSoundToggleState()
     Expect(IsSoundEnabled(), "sound can be re-enabled");
 }
 
+void TestSoundCueCallsAreSafe()
+{
+    SetSoundEnabled(false);
+    PlayMoveSound();
+    PlaySoftDropSound();
+    PlayHardDropSound();
+    PlayHoldSound();
+    PlayRotateSound();
+    PlayLineClearSound(1, false);
+    PlayLineClearSound(4, false);
+    PlayLineClearSound(1, true);
+    PlayLevelUpSound();
+    PlayPauseSound();
+    PlayGameOverSound();
+    SetSoundEnabled(true);
+    Expect(IsSoundEnabled(), "sound cue safety test restores sound");
+}
+
 void TestSettingsDefaultsAndPersistence()
 {
     const char *path = "tetris_settings_test.tmp";
@@ -766,6 +784,7 @@ int main()
     TestHighScoreSurvivesRestart();
     TestHighScoreFilePersistence();
     TestSoundToggleState();
+    TestSoundCueCallsAreSafe();
     TestSettingsDefaultsAndPersistence();
     TestSettingsSanitizeInvalidValues();
     TestLeaderboardSortsAndLimitsEntries();
