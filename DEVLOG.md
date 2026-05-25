@@ -26,6 +26,28 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Replace beep tones with procedural WAV cues
+
+- Changed: Replaced blocking-style Beep tone recipes with prebuilt in-memory
+  WAV cues played through WinMM, added layered transient/punch/sparkle clear
+  sounds, combined special clear playback into one cue so sounds do not stomp
+  each other, warmed audio on startup, linked WinMM in build paths, and updated
+  README/playtest audio notes.
+- Why: Windows playtesting showed many sounds still felt delayed and line
+  clears lacked the snappy, rewarding arcade feedback expected from Tetris.
+- Risk: WinMM `PlaySound` is still a simple legacy path rather than a full
+  WASAPI mixer, so real Windows listening is required for final taste and
+  latency judgment.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc
+  tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp
+  src/high_score.cpp src/leaderboard.cpp src/position.cpp src/settings.cpp
+  src/settings_options.cpp src/sound.cpp -o /private/tmp/tetris_core_tests`
+  and ran `/private/tmp/tetris_core_tests`; all core tests passed. Could not
+  run the CMake build locally because `cmake` is not installed in this macOS
+  environment.
+- Follow-ups: If this still feels delayed, move to a tiny WASAPI mixer or
+  bundled hand-authored WAV files for tighter playback and richer sound design.
+
 ### 2026-05-25 - Retune drop sound cues
 
 - Changed: Replaced the low hard-drop thud with a short brighter snap,

@@ -1044,15 +1044,8 @@ void Game::StartLineClear(const std::vector<int> &fullRows)
 
     lastClearedRows = fullRows;
     clearEventId++;
-    PlayLineClearSound(rowsCleared, lastClearSpinBlockId != 0);
-    if (lastClearWasBackToBack)
-    {
-        PlayBackToBackSound();
-    }
-    if (lastClearWasPerfectClear)
-    {
-        PlayPerfectClearSound();
-    }
+    PlayClearResultSound(rowsCleared, lastClearSpinBlockId != 0,
+                         lastClearWasBackToBack, lastClearWasPerfectClear);
     UpdateScore(rowsCleared, 0, lastClearSpinBlockId, lastClearScore);
 }
 

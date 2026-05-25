@@ -2146,6 +2146,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int showCommand)
     int leaderboardHighScore = GetBestLeaderboardScore(leaderboard);
     game.SetHighScore(savedHighScore > leaderboardHighScore ? savedHighScore : leaderboardHighScore);
     ApplyRuntimeSettings(LoadSettings(AppConfig::SettingsFile));
+    WarmUpSound();
 
     const char className[] = "HuiShanTetrisWindow";
 

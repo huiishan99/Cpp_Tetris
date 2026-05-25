@@ -21,7 +21,7 @@ score, and a dark pixel UI.
 - Local top-five leaderboard with name entry on qualifying scores
 - In-game tuning presets for DAS, ARR, clear effect speed, controls, window scale, and sound
 - Pixel-style font with compact Win32 rendering
-- Layered sound cues for moves, drops, hold, rotate, clears, spins, B2B, perfect clear, level-up, pause, and game over
+- Layered procedural WAV cues for moves, drops, hold, rotate, clears, spins, B2B, perfect clear, level-up, pause, and game over
 
 ## Controls
 
@@ -45,7 +45,7 @@ Inside settings, use Up / Down to choose a row, Left / Right to adjust values,
 Enter to edit `NAME`, and Esc or F1 to close the panel. `PRESET` switches
 between beginner, balanced, fast, and custom handling; `CONTROL` can limit
 movement to hybrid, arrows, or WASD; `WINDOW` scales the fixed pixel canvas;
-`VOLUME` adjusts the beep cue length. Settings are saved to
+`VOLUME` adjusts cue loudness. Settings are saved to
 `tetris_settings.txt`.
 When a game-over score reaches the local leaderboard, type a 3-12 character
 name and press Enter, or press Esc to save it under the default player name.
@@ -94,7 +94,7 @@ For an installer build, run `package.bat` first, then build
 Or build directly with MinGW-w64:
 
 ```powershell
-g++ -std=c++17 -Wall -Wextra src\*.cpp -mwindows -lgdi32 -luser32 -o main.exe
+g++ -std=c++17 -Wall -Wextra src\*.cpp -mwindows -lwinmm -lgdi32 -luser32 -o main.exe
 .\main.exe
 ```
 
@@ -134,7 +134,7 @@ src/high_score.cpp  Best-score file
 src/leaderboard.cpp Local top-five leaderboard file
 src/settings.cpp    DAS, ARR, effect, and sound settings file
 src/settings_options.cpp  Tuning presets and control scheme helpers
-src/sound.cpp       Tiny Windows beep cues, no-op elsewhere
+src/sound.cpp       Procedural Windows WAV cues, no-op elsewhere
 tests/core_tests.cpp
 ```
 

@@ -23,6 +23,7 @@ add_library(tetris_core ${TETRIS_CORE_SOURCES})
 target_include_directories(tetris_core PUBLIC src)
 
 if(WIN32)
+    target_link_libraries(tetris_core PUBLIC winmm)
     add_executable(tetris WIN32 src/main.cpp)
     set_target_properties(tetris PROPERTIES OUTPUT_NAME "main")
     target_link_libraries(tetris PRIVATE tetris_core gdi32 user32)

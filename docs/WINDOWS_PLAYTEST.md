@@ -27,9 +27,10 @@ real Windows run.
 ## Audio Pass
 
 - Move and soft-drop cues should stay subtle.
-- Hard drop should feel heavier.
-- Tetris, spin, B2B, and perfect clear cues should stand out.
-- `VOLUME` changes cue length enough to notice without muting at non-zero
+- Hard drop should feel crisp and immediate rather than heavy or muffled.
+- Tetris, spin, B2B, and perfect clear cues should feel punchy, sparkly, and
+  clearly more rewarding than a normal clear.
+- `VOLUME` changes cue loudness enough to notice without muting at non-zero
   values.
 - Sound OFF in settings should silence all cues.
 
