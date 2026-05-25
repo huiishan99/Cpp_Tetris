@@ -932,6 +932,7 @@ int main()
     TestHighScoreFilePersistence();
     TestSoundToggleState();
     TestSoundCueCallsAreSafe();
+    SetSoundEnabled(false);
     TestSettingsDefaultsAndPersistence();
     TestSettingsSanitizeInvalidValues();
     TestSettingsOptionHelpers();
@@ -954,6 +955,7 @@ int main()
     TestLevelUpEventOnLineThreshold();
     TestLevelAndDropSpeedProgression();
 
+    ShutdownSound();
     std::cout << "All core tests passed." << std::endl;
     return 0;
 }

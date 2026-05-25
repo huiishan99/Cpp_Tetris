@@ -336,6 +336,22 @@ void DrawTextCentered(HDC hdc, int left, int right, int y, const std::string &te
     DeleteObject(font);
 }
 
+void DrawTextInRect(HDC hdc, RECT rect, const std::string &text, int size,
+                    COLORREF color, int weight = FW_NORMAL,
+                    UINT format = DT_LEFT | DT_VCENTER | DT_SINGLELINE)
+{
+    HFONT font = CreateFontA(size, 0, 0, 0, weight, FALSE, FALSE, FALSE,
+                             ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                             GetGameFontQuality(), DEFAULT_PITCH | FF_DONTCARE, GetGameFontName());
+    HFONT oldFont = static_cast<HFONT>(SelectObject(hdc, font));
+    SetBkMode(hdc, TRANSPARENT);
+    SetTextColor(hdc, color);
+    DrawTextA(hdc, text.c_str(), static_cast<int>(text.size()), &rect,
+              format | DT_END_ELLIPSIS | DT_NOPREFIX);
+    SelectObject(hdc, oldFont);
+    DeleteObject(font);
+}
+
 void FillRectColor(HDC hdc, int left, int top, int right, int bottom, COLORREF color)
 {
     HBRUSH brush = CreateSolidBrush(color);
@@ -745,8 +761,8 @@ void DrawPauseMenuOverlay(HDC hdc)
 
 void DrawLeaderboardOverlay(HDC hdc)
 {
-    int left = AppConfig::BoardLeft + 18;
-    int right = AppConfig::BoardLeft + AppConfig::CellSize * 10 - 18;
+    int left = AppConfig::WindowWidth / 2 - 190;
+    int right = AppConfig::WindowWidth / 2 + 190;
     int top = AppConfig::BoardTop + 104;
     int bottom = AppConfig::BoardTop + 484;
     COLORREF accent = RGB(123, 205, 236);
@@ -775,16 +791,22 @@ void DrawLeaderboardOverlay(HDC hdc)
         for (int index = 0; index < rowsToDraw; index++)
         {
             int rowTop = top + 104 + index * 42;
+            int rowLeft = left + 34;
+            int rowRight = right - 34;
             COLORREF rowFill = index == 0 ? RGB(47, 49, 39) : RGB(29, 34, 34);
             COLORREF rowBorder = index == 0 ? RGB(249, 214, 124) : RGB(66, 76, 66);
-            FillRoundRectColor(hdc, left + 34, rowTop, right - 34, rowTop + 34, 8,
+            FillRoundRectColor(hdc, rowLeft, rowTop, rowRight, rowTop + 34, 8,
                                rowFill, rowBorder);
-            DrawTextLine(hdc, left + 50, rowTop + 8, std::to_string(index + 1) + ".",
-                         17, RGB(123, 205, 236), FW_BOLD);
-            DrawTextLine(hdc, left + 90, rowTop + 8, ranked[index].name,
-                         17, RGB(248, 244, 225), FW_BOLD);
-            DrawTextLine(hdc, right - 122, rowTop + 8, std::to_string(ranked[index].score),
-                         17, RGB(249, 214, 124), FW_BOLD);
+
+            RECT rankRect = {rowLeft + 12, rowTop + 1, rowLeft + 48, rowTop + 34};
+            RECT scoreRect = {rowRight - 112, rowTop + 1, rowRight - 12, rowTop + 34};
+            RECT nameRect = {rowLeft + 54, rowTop + 1, scoreRect.left - 10, rowTop + 34};
+            DrawTextInRect(hdc, rankRect, std::to_string(index + 1) + ".",
+                           17, RGB(123, 205, 236), FW_BOLD);
+            DrawTextInRect(hdc, nameRect, ranked[index].name,
+                           17, RGB(248, 244, 225), FW_BOLD);
+            DrawTextInRect(hdc, scoreRect, std::to_string(ranked[index].score),
+                           17, RGB(249, 214, 124), FW_BOLD, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
         }
     }
 
@@ -793,8 +815,8 @@ void DrawLeaderboardOverlay(HDC hdc)
 
 void DrawGameOverOverlay(HDC hdc)
 {
-    int left = AppConfig::BoardLeft + 18;
-    int right = AppConfig::BoardLeft + AppConfig::CellSize * 10 - 18;
+    int left = AppConfig::WindowWidth / 2 - 180;
+    int right = AppConfig::WindowWidth / 2 + 180;
     int top = AppConfig::BoardTop + 112;
     int bottom = AppConfig::BoardTop + 438;
     COLORREF accent = RGB(240, 101, 95);
@@ -854,11 +876,15 @@ void DrawGameOverOverlay(HDC hdc)
     for (int index = 0; index < rowsToDraw; index++)
     {
         int rowTop = top + 184 + index * 34;
-        std::string rank = std::to_string(index + 1) + ".";
-        DrawTextLine(hdc, left + 44, rowTop, rank, 17, RGB(123, 205, 236), FW_BOLD);
-        DrawTextLine(hdc, left + 82, rowTop, ranked[index].name, 17, RGB(248, 244, 225), FW_BOLD);
-        DrawTextLine(hdc, right - 104, rowTop, std::to_string(ranked[index].score),
-                     17, RGB(249, 214, 124), FW_BOLD);
+        RECT rankRect = {left + 44, rowTop, left + 80, rowTop + 24};
+        RECT scoreRect = {right - 138, rowTop, right - 44, rowTop + 24};
+        RECT nameRect = {left + 86, rowTop, scoreRect.left - 10, rowTop + 24};
+        DrawTextInRect(hdc, rankRect, std::to_string(index + 1) + ".",
+                       17, RGB(123, 205, 236), FW_BOLD);
+        DrawTextInRect(hdc, nameRect, ranked[index].name,
+                       17, RGB(248, 244, 225), FW_BOLD);
+        DrawTextInRect(hdc, scoreRect, std::to_string(ranked[index].score),
+                       17, RGB(249, 214, 124), FW_BOLD, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
     }
 }
 
@@ -2099,6 +2125,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         KillTimer(hwnd, AppConfig::LevelFlashTimerId);
         KillTimer(hwnd, AppConfig::LockDelayTimerId);
         KillTimer(hwnd, AppConfig::InputTimerId);
+        ShutdownSound();
         PostQuitMessage(0);
         return 0;
     default:
@@ -2157,6 +2184,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int showCommand)
         DispatchMessage(&message);
     }
 
+    ShutdownSound();
     SaveHighScore(AppConfig::HighScoreFile, game.GetHighScore());
     SaveLeaderboard(AppConfig::LeaderboardFile, leaderboard);
     SaveSettings(AppConfig::SettingsFile, CollectRuntimeSettings());

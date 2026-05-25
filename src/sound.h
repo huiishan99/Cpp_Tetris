@@ -15,3 +15,4 @@ void SetSoundEnabled(bool enabled);
 bool IsSoundEnabled();
 void SetSoundVolumePercent(int volumePercent);
 int GetSoundVolumePercent();
+void ShutdownSound();

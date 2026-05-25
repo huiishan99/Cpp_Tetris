@@ -1,13 +1,37 @@
 #include "sound.h"
 
+#include <atomic>
+#include <cstddef>
+#include <deque>
+#include <initializer_list>
+#include <utility>
+#include <vector>
+
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
 namespace
 {
-bool soundEnabled = true;
-int soundVolumePercent = 100;
+struct Tone
+{
+    int frequency;
+    int durationMs;
+};
+
+std::atomic_bool soundEnabled{true};
+std::atomic_int soundVolumePercent{100};
+
+#ifdef _WIN32
+constexpr std::size_t MaxQueuedCues = 4;
+
+CRITICAL_SECTION soundLock;
+bool soundLockInitialized = false;
+HANDLE soundEvent = nullptr;
+HANDLE soundThread = nullptr;
+bool soundShutdownRequested = false;
+std::deque<std::vector<Tone>> soundQueue;
+#endif
 
 int ClampVolume(int value)
 {
@@ -22,197 +46,320 @@ int ClampVolume(int value)
     return value;
 }
 
-void PlayTone(int frequency, int durationMs)
+#ifdef _WIN32
+int GetScaledDurationMs(int durationMs)
 {
-    if (!soundEnabled || soundVolumePercent <= 0)
+    int volumePercent = soundVolumePercent.load();
+    if (!soundEnabled.load() || volumePercent <= 0)
     {
-        return;
+        return 0;
     }
 
-    int scaledDurationMs = durationMs * soundVolumePercent / 100;
+    int scaledDurationMs = durationMs * volumePercent / 100;
     if (scaledDurationMs <= 0)
     {
         scaledDurationMs = 1;
     }
+    return scaledDurationMs;
+}
+
+void PlayToneBlocking(const Tone &tone)
+{
+    int scaledDurationMs = GetScaledDurationMs(tone.durationMs);
+    if (scaledDurationMs <= 0)
+    {
+        return;
+    }
+
+    Beep(tone.frequency, scaledDurationMs);
+}
+
+DWORD WINAPI SoundThreadMain(LPVOID)
+{
+    while (true)
+    {
+        WaitForSingleObject(soundEvent, INFINITE);
+
+        while (true)
+        {
+            std::vector<Tone> cue;
+
+            EnterCriticalSection(&soundLock);
+            if (soundShutdownRequested)
+            {
+                LeaveCriticalSection(&soundLock);
+                return 0;
+            }
+            if (soundQueue.empty())
+            {
+                LeaveCriticalSection(&soundLock);
+                break;
+            }
+            cue = std::move(soundQueue.front());
+            soundQueue.pop_front();
+            LeaveCriticalSection(&soundLock);
+
+            for (const Tone &tone : cue)
+            {
+                EnterCriticalSection(&soundLock);
+                bool shouldStop = soundShutdownRequested;
+                LeaveCriticalSection(&soundLock);
+                if (shouldStop)
+                {
+                    return 0;
+                }
+                PlayToneBlocking(tone);
+            }
+        }
+    }
+}
+
+bool EnsureSoundEngine()
+{
+    if (!soundLockInitialized)
+    {
+        InitializeCriticalSection(&soundLock);
+        soundLockInitialized = true;
+    }
+
+    EnterCriticalSection(&soundLock);
+    if (soundEvent == nullptr)
+    {
+        soundEvent = CreateEventA(nullptr, FALSE, FALSE, nullptr);
+    }
+    if (soundEvent != nullptr && soundThread == nullptr)
+    {
+        soundShutdownRequested = false;
+        soundThread = CreateThread(nullptr, 0, SoundThreadMain, nullptr, 0, nullptr);
+    }
+    bool ready = soundEvent != nullptr && soundThread != nullptr;
+    LeaveCriticalSection(&soundLock);
+    return ready;
+}
+
+void ClearQueuedSounds()
+{
+    if (!soundLockInitialized)
+    {
+        return;
+    }
+
+    EnterCriticalSection(&soundLock);
+    soundQueue.clear();
+    LeaveCriticalSection(&soundLock);
+}
+
+void QueueCue(std::initializer_list<Tone> tones, bool replaceQueued, bool dropIfBusy)
+{
+    if (!soundEnabled.load() || soundVolumePercent.load() <= 0 || tones.size() == 0)
+    {
+        return;
+    }
+    if (!EnsureSoundEngine())
+    {
+        return;
+    }
+
+    EnterCriticalSection(&soundLock);
+    if (soundShutdownRequested)
+    {
+        LeaveCriticalSection(&soundLock);
+        return;
+    }
+    if (replaceQueued)
+    {
+        soundQueue.clear();
+    }
+    else if (dropIfBusy && !soundQueue.empty())
+    {
+        LeaveCriticalSection(&soundLock);
+        return;
+    }
+    else if (soundQueue.size() >= MaxQueuedCues)
+    {
+        soundQueue.pop_front();
+    }
+
+    soundQueue.emplace_back(tones);
+    SetEvent(soundEvent);
+    LeaveCriticalSection(&soundLock);
+}
+#else
+void ClearQueuedSounds()
+{
+}
+#endif
+
+void PlayCue(std::initializer_list<Tone> tones, bool replaceQueued = false, bool dropIfBusy = false)
+{
+    if (!soundEnabled.load() || soundVolumePercent.load() <= 0)
+    {
+        return;
+    }
 
 #ifdef _WIN32
-    Beep(frequency, scaledDurationMs);
+    QueueCue(tones, replaceQueued, dropIfBusy);
 #else
-    (void)frequency;
-    (void)scaledDurationMs;
+    (void)tones;
+    (void)replaceQueued;
+    (void)dropIfBusy;
 #endif
 }
 }
 
 void SetSoundEnabled(bool enabled)
 {
-    soundEnabled = enabled;
+    soundEnabled.store(enabled);
     if (!soundEnabled)
     {
-        soundVolumePercent = 0;
+        soundVolumePercent.store(0);
+        ClearQueuedSounds();
     }
-    else if (soundVolumePercent == 0)
+    else if (soundVolumePercent.load() == 0)
     {
-        soundVolumePercent = 100;
+        soundVolumePercent.store(100);
     }
 }
 
 bool IsSoundEnabled()
 {
-    return soundEnabled;
+    return soundEnabled.load();
 }
 
 void SetSoundVolumePercent(int volumePercent)
 {
-    soundVolumePercent = ClampVolume(volumePercent);
-    soundEnabled = soundVolumePercent > 0;
+    int clampedVolumePercent = ClampVolume(volumePercent);
+    soundVolumePercent.store(clampedVolumePercent);
+    soundEnabled.store(clampedVolumePercent > 0);
+    if (clampedVolumePercent == 0)
+    {
+        ClearQueuedSounds();
+    }
 }
 
 int GetSoundVolumePercent()
 {
-    return soundVolumePercent;
+    return soundVolumePercent.load();
 }
 
 void PlayMoveSound()
 {
-    if (!soundEnabled)
-    {
-        return;
-    }
-    PlayTone(560, 8);
+    PlayCue({{560, 8}}, false, true);
 }
 
 void PlaySoftDropSound()
 {
-    if (!soundEnabled)
-    {
-        return;
-    }
-    PlayTone(370, 8);
+    PlayCue({{370, 8}}, false, true);
 }
 
 void PlayHardDropSound()
 {
-    if (!soundEnabled)
-    {
-        return;
-    }
-    PlayTone(220, 18);
-    PlayTone(160, 38);
+    PlayCue({{220, 18}, {160, 38}}, true);
 }
 
 void PlayHoldSound()
 {
-    if (!soundEnabled)
-    {
-        return;
-    }
-    PlayTone(520, 18);
-    PlayTone(660, 22);
+    PlayCue({{520, 18}, {660, 22}}, false, true);
 }
 
 void PlayRotateSound()
 {
-    if (!soundEnabled)
-    {
-        return;
-    }
-    PlayTone(780, 14);
-    PlayTone(980, 12);
+    PlayCue({{780, 14}, {980, 12}}, false, true);
 }
 
 void PlayLineClearSound(int completedLines, bool spinClear)
 {
-    if (!soundEnabled)
-    {
-        return;
-    }
-
     if (spinClear)
     {
-        PlayTone(880, 28);
-        PlayTone(1175, 36);
-        PlayTone(1480, 48);
+        PlayCue({{880, 28}, {1175, 36}, {1480, 48}}, true);
         return;
     }
 
     switch (completedLines)
     {
     case 1:
-        PlayTone(660, 35);
+        PlayCue({{660, 35}}, true);
         break;
     case 2:
-        PlayTone(660, 28);
-        PlayTone(784, 38);
+        PlayCue({{660, 28}, {784, 38}}, true);
         break;
     case 3:
-        PlayTone(660, 24);
-        PlayTone(784, 28);
-        PlayTone(988, 44);
+        PlayCue({{660, 24}, {784, 28}, {988, 44}}, true);
         break;
     case 4:
-        PlayTone(523, 26);
-        PlayTone(659, 26);
-        PlayTone(784, 32);
-        PlayTone(1046, 58);
+        PlayCue({{523, 26}, {659, 26}, {784, 32}, {1046, 58}}, true);
         break;
     default:
-        PlayTone(660, 35);
+        PlayCue({{660, 35}}, true);
         break;
     }
 }
 
 void PlayBackToBackSound()
 {
-    if (!soundEnabled)
-    {
-        return;
-    }
-    PlayTone(988, 18);
-    PlayTone(1175, 22);
-    PlayTone(1319, 34);
+    PlayCue({{988, 18}, {1175, 22}, {1319, 34}});
 }
 
 void PlayPerfectClearSound()
 {
-    if (!soundEnabled)
-    {
-        return;
-    }
-    PlayTone(784, 24);
-    PlayTone(988, 24);
-    PlayTone(1175, 28);
-    PlayTone(1568, 62);
+    PlayCue({{784, 24}, {988, 24}, {1175, 28}, {1568, 62}});
 }
 
 void PlayLevelUpSound()
 {
-    if (!soundEnabled)
-    {
-        return;
-    }
-    PlayTone(740, 34);
-    PlayTone(932, 34);
-    PlayTone(1175, 70);
+    PlayCue({{740, 34}, {932, 34}, {1175, 70}});
 }
 
 void PlayPauseSound()
 {
-    if (!soundEnabled)
-    {
-        return;
-    }
-    PlayTone(500, 18);
-    PlayTone(420, 20);
+    PlayCue({{500, 18}, {420, 20}}, true);
 }
 
 void PlayGameOverSound()
 {
-    if (!soundEnabled)
+    PlayCue({{330, 42}, {247, 60}, {165, 78}}, true);
+}
+
+void ShutdownSound()
+{
+#ifdef _WIN32
+    if (!soundLockInitialized)
     {
         return;
     }
-    PlayTone(330, 42);
-    PlayTone(247, 60);
-    PlayTone(165, 78);
+
+    HANDLE threadToWait = nullptr;
+
+    EnterCriticalSection(&soundLock);
+    soundShutdownRequested = true;
+    soundQueue.clear();
+    threadToWait = soundThread;
+    if (soundEvent != nullptr)
+    {
+        SetEvent(soundEvent);
+    }
+    LeaveCriticalSection(&soundLock);
+
+    if (threadToWait != nullptr)
+    {
+        WaitForSingleObject(threadToWait, INFINITE);
+    }
+
+    EnterCriticalSection(&soundLock);
+    if (soundThread != nullptr)
+    {
+        CloseHandle(soundThread);
+        soundThread = nullptr;
+    }
+    if (soundEvent != nullptr)
+    {
+        CloseHandle(soundEvent);
+        soundEvent = nullptr;
+    }
+    soundShutdownRequested = false;
+    LeaveCriticalSection(&soundLock);
+
+    DeleteCriticalSection(&soundLock);
+    soundLockInitialized = false;
+#endif
 }

@@ -26,6 +26,26 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Fix Windows sound latency and leaderboard spacing
+
+- Changed: Moved Windows beep cues onto a background sound queue, clear stale
+  movement cues before important sounds, shut the sound thread down on exit,
+  widened leaderboard/game-over panels, and drew leaderboard names/scores in
+  clipped columns with right-aligned scores.
+- Why: Windows `Beep` blocks the caller and made input/paint feel delayed;
+  the leaderboard rows were too narrow, causing player names and scores to
+  overlap on real Windows font rendering.
+- Risk: The sound worker uses Win32 threading and still needs a Windows
+  playtest to confirm cue timing feels snappy. Long names are now ellipsized
+  instead of overflowing.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc
+  tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp
+  src/high_score.cpp src/leaderboard.cpp src/position.cpp src/settings.cpp
+  src/settings_options.cpp src/sound.cpp -o /private/tmp/tetris_core_tests`
+  and ran `/private/tmp/tetris_core_tests`; all core tests passed.
+- Follow-ups: Recheck packaged Windows build sound feel and leaderboard
+  spacing at 100%, 125%, and 150% window scales.
+
 ### 2026-05-25 - Refresh Windows playtest checklist
 
 - Changed: Updated `docs/WINDOWS_PLAYTEST.md` for menus, tuning presets,
