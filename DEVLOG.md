@@ -26,6 +26,23 @@ specific edits.
 
 ## Entries
 
+### 2026-05-25 - Retune drop sound cues
+
+- Changed: Replaced the low hard-drop thud with a short brighter snap,
+  lightened soft-drop/move/rotate/hold cues, and made small input cues skip
+  while another cue is actively playing.
+- Why: Windows playtesting showed the drop sound still felt heavy, muffled,
+  and delayed even after moving playback off the main thread.
+- Risk: Beep-based sound is still limited by Windows tone playback, so the
+  final taste needs another real Windows listen.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc
+  tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp
+  src/high_score.cpp src/leaderboard.cpp src/position.cpp src/settings.cpp
+  src/settings_options.cpp src/sound.cpp -o /private/tmp/tetris_core_tests`
+  and ran `/private/tmp/tetris_core_tests`; all core tests passed.
+- Follow-ups: If the beep palette still feels harsh, replace these cues with
+  short bundled WAV effects instead of generated tones.
+
 ### 2026-05-25 - Fix Windows sound latency and leaderboard spacing
 
 - Changed: Moved Windows beep cues onto a background sound queue, clear stale

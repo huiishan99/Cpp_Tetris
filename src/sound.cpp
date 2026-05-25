@@ -25,6 +25,7 @@ std::atomic_int soundVolumePercent{100};
 #ifdef _WIN32
 constexpr std::size_t MaxQueuedCues = 4;
 
+std::atomic_bool soundCuePlaying{false};
 CRITICAL_SECTION soundLock;
 bool soundLockInitialized = false;
 HANDLE soundEvent = nullptr;
@@ -99,6 +100,7 @@ DWORD WINAPI SoundThreadMain(LPVOID)
             soundQueue.pop_front();
             LeaveCriticalSection(&soundLock);
 
+            soundCuePlaying.store(true);
             for (const Tone &tone : cue)
             {
                 EnterCriticalSection(&soundLock);
@@ -106,10 +108,12 @@ DWORD WINAPI SoundThreadMain(LPVOID)
                 LeaveCriticalSection(&soundLock);
                 if (shouldStop)
                 {
+                    soundCuePlaying.store(false);
                     return 0;
                 }
                 PlayToneBlocking(tone);
             }
+            soundCuePlaying.store(false);
         }
     }
 }
@@ -170,7 +174,7 @@ void QueueCue(std::initializer_list<Tone> tones, bool replaceQueued, bool dropIf
     {
         soundQueue.clear();
     }
-    else if (dropIfBusy && !soundQueue.empty())
+    else if (dropIfBusy && (soundCuePlaying.load() || !soundQueue.empty()))
     {
         LeaveCriticalSection(&soundLock);
         return;
@@ -244,27 +248,27 @@ int GetSoundVolumePercent()
 
 void PlayMoveSound()
 {
-    PlayCue({{560, 8}}, false, true);
+    PlayCue({{640, 5}}, false, true);
 }
 
 void PlaySoftDropSound()
 {
-    PlayCue({{370, 8}}, false, true);
+    PlayCue({{760, 4}}, false, true);
 }
 
 void PlayHardDropSound()
 {
-    PlayCue({{220, 18}, {160, 38}}, true);
+    PlayCue({{880, 7}, {1175, 12}}, true);
 }
 
 void PlayHoldSound()
 {
-    PlayCue({{520, 18}, {660, 22}}, false, true);
+    PlayCue({{700, 10}, {940, 12}}, false, true);
 }
 
 void PlayRotateSound()
 {
-    PlayCue({{780, 14}, {980, 12}}, false, true);
+    PlayCue({{1046, 7}}, false, true);
 }
 
 void PlayLineClearSound(int completedLines, bool spinClear)
@@ -333,6 +337,7 @@ void ShutdownSound()
     EnterCriticalSection(&soundLock);
     soundShutdownRequested = true;
     soundQueue.clear();
+    soundCuePlaying.store(false);
     threadToWait = soundThread;
     if (soundEvent != nullptr)
     {
