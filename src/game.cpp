@@ -742,10 +742,7 @@ void Game::DropBlock()
             if (IsBlockOutside() || BlockFits() == false)
             {
                 currentBlock.Move(-1, 0);
-                if (rowsDropped > 0)
-                {
-                    PlayHardDropSound();
-                }
+                PlayHardDropSound();
                 LockBlock();
                 break;
             }

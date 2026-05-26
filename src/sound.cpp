@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <mutex>
 
 #ifdef _WIN32
 #include <array>
@@ -54,7 +55,17 @@ constexpr double TwoPi = Pi * 2.0;
 constexpr double MasterOutputGain = 0.38;
 constexpr int CueCount = static_cast<int>(SoundCue::Count);
 
-std::array<std::vector<char>, CueCount> soundCache;
+struct ActivePlayback
+{
+    HWAVEOUT output = nullptr;
+    WAVEHDR header = {};
+    std::vector<short> samples;
+};
+
+std::array<std::vector<short>, CueCount> soundCache;
+std::array<DWORD, CueCount> lastCuePlayTimes = {};
+std::mutex activeSoundLock;
+std::vector<HWAVEOUT> activeOutputs;
 bool soundCacheReady = false;
 int cachedSoundVolumePercent = -1;
 
@@ -283,64 +294,51 @@ std::vector<short> BuildCueSamples(SoundCue cue, int volumePercent)
     return ConvertToPcm(mix, volumePercent);
 }
 
-void AppendFourCc(std::vector<char> &bytes, const char *text)
+WAVEFORMATEX MakeWaveFormat()
 {
-    for (int index = 0; index < 4; index++)
+    WAVEFORMATEX format = {};
+    format.wFormatTag = WAVE_FORMAT_PCM;
+    format.nChannels = 1;
+    format.nSamplesPerSec = SampleRate;
+    format.wBitsPerSample = 16;
+    format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
+    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
+    return format;
+}
+
+void ForgetActiveOutput(HWAVEOUT output)
+{
+    std::lock_guard<std::mutex> lock(activeSoundLock);
+    activeOutputs.erase(std::remove(activeOutputs.begin(), activeOutputs.end(), output), activeOutputs.end());
+}
+
+DWORD WINAPI CleanupPlaybackThread(LPVOID parameter)
+{
+    ActivePlayback *playback = static_cast<ActivePlayback *>(parameter);
+    while ((playback->header.dwFlags & WHDR_DONE) == 0)
     {
-        bytes.push_back(text[index]);
+        Sleep(2);
     }
-}
 
-void AppendUInt16(std::vector<char> &bytes, unsigned int value)
-{
-    bytes.push_back(static_cast<char>(value & 0xffu));
-    bytes.push_back(static_cast<char>((value >> 8) & 0xffu));
-}
-
-void AppendUInt32(std::vector<char> &bytes, unsigned int value)
-{
-    bytes.push_back(static_cast<char>(value & 0xffu));
-    bytes.push_back(static_cast<char>((value >> 8) & 0xffu));
-    bytes.push_back(static_cast<char>((value >> 16) & 0xffu));
-    bytes.push_back(static_cast<char>((value >> 24) & 0xffu));
-}
-
-std::vector<char> BuildWavBytes(const std::vector<short> &samples)
-{
-    constexpr int Channels = 1;
-    constexpr int BitsPerSample = 16;
-    constexpr int BlockAlign = Channels * BitsPerSample / 8;
-    constexpr int ByteRate = SampleRate * BlockAlign;
-
-    unsigned int dataSize = static_cast<unsigned int>(samples.size() * sizeof(short));
-    std::vector<char> bytes;
-    bytes.reserve(44 + dataSize);
-
-    AppendFourCc(bytes, "RIFF");
-    AppendUInt32(bytes, 36u + dataSize);
-    AppendFourCc(bytes, "WAVE");
-    AppendFourCc(bytes, "fmt ");
-    AppendUInt32(bytes, 16u);
-    AppendUInt16(bytes, 1u);
-    AppendUInt16(bytes, Channels);
-    AppendUInt32(bytes, SampleRate);
-    AppendUInt32(bytes, ByteRate);
-    AppendUInt16(bytes, BlockAlign);
-    AppendUInt16(bytes, BitsPerSample);
-    AppendFourCc(bytes, "data");
-    AppendUInt32(bytes, dataSize);
-
-    for (short sample : samples)
-    {
-        unsigned short value = static_cast<unsigned short>(sample);
-        AppendUInt16(bytes, value);
-    }
-    return bytes;
+    waveOutUnprepareHeader(playback->output, &playback->header, sizeof(playback->header));
+    ForgetActiveOutput(playback->output);
+    waveOutClose(playback->output);
+    delete playback;
+    return 0;
 }
 
 void StopSoundPlayback()
 {
-    PlaySoundA(nullptr, nullptr, 0);
+    std::vector<HWAVEOUT> outputs;
+    {
+        std::lock_guard<std::mutex> lock(activeSoundLock);
+        outputs = activeOutputs;
+    }
+
+    for (HWAVEOUT output : outputs)
+    {
+        waveOutReset(output);
+    }
 }
 
 void MarkSoundCacheDirty()
@@ -365,11 +363,112 @@ bool EnsureSoundLibrary()
     for (int index = 0; index < CueCount; index++)
     {
         SoundCue cue = static_cast<SoundCue>(index);
-        soundCache[index] = BuildWavBytes(BuildCueSamples(cue, volumePercent));
+        soundCache[index] = BuildCueSamples(cue, volumePercent);
     }
     soundCacheReady = true;
     cachedSoundVolumePercent = volumePercent;
     return true;
+}
+
+int GetCueCooldownMs(SoundCue cue)
+{
+    switch (cue)
+    {
+    case SoundCue::Move:
+        return 18;
+    case SoundCue::SoftDrop:
+        return 28;
+    case SoundCue::Rotate:
+        return 18;
+    case SoundCue::Hold:
+        return 60;
+    default:
+        return 0;
+    }
+}
+
+bool ShouldSkipCue(SoundCue cue, bool important)
+{
+    if (important)
+    {
+        return false;
+    }
+
+    int cooldownMs = GetCueCooldownMs(cue);
+    if (cooldownMs <= 0)
+    {
+        return false;
+    }
+
+    DWORD now = GetTickCount();
+    int cueIndex = CueIndex(cue);
+    DWORD elapsed = now - lastCuePlayTimes[cueIndex];
+    if (elapsed < static_cast<DWORD>(cooldownMs))
+    {
+        return true;
+    }
+
+    lastCuePlayTimes[cueIndex] = now;
+    return false;
+}
+
+void PlayWaveOutCue(SoundCue cue)
+{
+    const std::vector<short> &samples = soundCache[CueIndex(cue)];
+    if (samples.empty())
+    {
+        return;
+    }
+
+    ActivePlayback *playback = new ActivePlayback;
+    playback->samples = samples;
+    WAVEFORMATEX format = MakeWaveFormat();
+
+    MMRESULT result = waveOutOpen(&playback->output, WAVE_MAPPER, &format, 0, 0, CALLBACK_NULL);
+    if (result != MMSYSERR_NOERROR)
+    {
+        delete playback;
+        return;
+    }
+
+    playback->header.lpData = reinterpret_cast<LPSTR>(playback->samples.data());
+    playback->header.dwBufferLength = static_cast<DWORD>(playback->samples.size() * sizeof(short));
+
+    result = waveOutPrepareHeader(playback->output, &playback->header, sizeof(playback->header));
+    if (result != MMSYSERR_NOERROR)
+    {
+        waveOutClose(playback->output);
+        delete playback;
+        return;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(activeSoundLock);
+        activeOutputs.push_back(playback->output);
+    }
+
+    result = waveOutWrite(playback->output, &playback->header, sizeof(playback->header));
+    if (result != MMSYSERR_NOERROR)
+    {
+        waveOutUnprepareHeader(playback->output, &playback->header, sizeof(playback->header));
+        ForgetActiveOutput(playback->output);
+        waveOutClose(playback->output);
+        delete playback;
+        return;
+    }
+
+    HANDLE cleanupThread = CreateThread(nullptr, 0, CleanupPlaybackThread, playback, 0, nullptr);
+    if (cleanupThread != nullptr)
+    {
+        CloseHandle(cleanupThread);
+        return;
+    }
+
+    waveOutReset(playback->output);
+    waveOutUnprepareHeader(playback->output, &playback->header, sizeof(playback->header));
+    ForgetActiveOutput(playback->output);
+    waveOutClose(playback->output);
+    delete playback;
 }
 #else
 void StopSoundPlayback()
@@ -381,7 +480,7 @@ void MarkSoundCacheDirty()
 }
 #endif
 
-void PlayCue(SoundCue cue, bool interruptCurrent)
+void PlayCue(SoundCue cue, bool important)
 {
     if (!soundEnabled.load() || soundVolumePercent.load() <= 0)
     {
@@ -393,17 +492,14 @@ void PlayCue(SoundCue cue, bool interruptCurrent)
     {
         return;
     }
-
-    const std::vector<char> &bytes = soundCache[CueIndex(cue)];
-    DWORD flags = SND_MEMORY | SND_ASYNC | SND_NODEFAULT;
-    if (!interruptCurrent)
+    if (ShouldSkipCue(cue, important))
     {
-        flags |= SND_NOSTOP;
+        return;
     }
-    PlaySoundA(bytes.data(), nullptr, flags);
+    PlayWaveOutCue(cue);
 #else
     (void)cue;
-    (void)interruptCurrent;
+    (void)important;
 #endif
 }
 

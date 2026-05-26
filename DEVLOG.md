@@ -26,6 +26,26 @@ specific edits.
 
 ## Entries
 
+### 2026-05-26 - Mix overlapping short sound cues
+
+- Changed: Replaced single-channel `PlaySound` playback with per-cue WinMM
+  `waveOut` playback so short cues can overlap, added cooldowns for tiny
+  movement cues, stop active wave outputs on volume/shutdown changes, and made
+  hard drop play even when space locks an already-grounded piece.
+- Why: `PlaySound` could only play one cue at a time, so hard drop sometimes
+  disappeared behind clear sounds and perceived loudness changed depending on
+  which cue interrupted which.
+- Risk: Multiple `waveOut` handles rely on the Windows system mixer; real
+  Windows testing is needed to confirm overlap feels consistent without
+  getting too busy during rapid inputs.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc
+  tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp
+  src/high_score.cpp src/leaderboard.cpp src/position.cpp src/settings.cpp
+  src/settings_options.cpp src/sound.cpp -o /private/tmp/tetris_core_tests`
+  and ran `/private/tmp/tetris_core_tests`; all core tests passed.
+- Follow-ups: If Windows still feels inconsistent, replace per-cue waveOut
+  handles with one persistent low-latency mixer stream.
+
 ### 2026-05-26 - Soften procedural audio volume
 
 - Changed: Limited the MSVC-only WinMM pragma to `_MSC_VER`, lowered the
