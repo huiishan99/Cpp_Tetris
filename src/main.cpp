@@ -1424,6 +1424,7 @@ void AdjustSelectedSetting(HWND hwnd, int direction)
             SetSoundEnabled(true);
             SetSoundVolumePercent(soundVolumePercent <= 0 ? SettingsDefaultSoundVolumePercent : soundVolumePercent);
             soundVolumePercent = GetSoundVolumePercent();
+            PlayMoveSound();
         }
     }
     else if (selectedSettingIndex == SettingsSoundVolume)
@@ -1433,6 +1434,7 @@ void AdjustSelectedSetting(HWND hwnd, int direction)
                               SettingsMaxSoundVolumePercent);
         SetSoundVolumePercent(volume);
         soundVolumePercent = GetSoundVolumePercent();
+        PlayMoveSound();
     }
 }
 

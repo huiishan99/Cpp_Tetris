@@ -11,7 +11,9 @@
 #include <mmsystem.h>
 #include <vector>
 
+#ifdef _MSC_VER
 #pragma comment(lib, "winmm.lib")
+#endif
 #endif
 
 namespace
@@ -49,6 +51,7 @@ int ClampVolume(int value)
 constexpr int SampleRate = 44100;
 constexpr double Pi = 3.14159265358979323846;
 constexpr double TwoPi = Pi * 2.0;
+constexpr double MasterOutputGain = 0.38;
 constexpr int CueCount = static_cast<int>(SoundCue::Count);
 
 std::array<std::vector<char>, CueCount> soundCache;
@@ -145,7 +148,8 @@ std::vector<short> ConvertToPcm(const std::vector<double> &mix, int volumePercen
 {
     std::vector<short> samples;
     samples.reserve(mix.size());
-    double volume = static_cast<double>(ClampVolume(volumePercent)) / 100.0;
+    double normalizedVolume = static_cast<double>(ClampVolume(volumePercent)) / 100.0;
+    double volume = MasterOutputGain * std::pow(normalizedVolume, 1.45);
 
     for (double sample : mix)
     {

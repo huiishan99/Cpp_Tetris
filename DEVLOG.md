@@ -26,6 +26,23 @@ specific edits.
 
 ## Entries
 
+### 2026-05-26 - Soften procedural audio volume
+
+- Changed: Limited the MSVC-only WinMM pragma to `_MSC_VER`, lowered the
+  default sound volume, added a master output gain with a curved volume scale,
+  and play a small preview cue when sound volume is adjusted or re-enabled.
+- Why: MinGW ignored the MSVC pragma with a warning, and the first procedural
+  WAV mix was too loud with no immediate feedback while changing `VOLUME`.
+- Risk: The safer gain curve may make low volume settings very quiet; Windows
+  listening is still needed to tune the exact curve.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc
+  tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp
+  src/high_score.cpp src/leaderboard.cpp src/position.cpp src/settings.cpp
+  src/settings_options.cpp src/sound.cpp -o /private/tmp/tetris_core_tests`
+  and ran `/private/tmp/tetris_core_tests`; all core tests passed.
+- Follow-ups: Add a dedicated gentle settings-preview cue if the movement cue
+  feels too gameplay-like in the settings panel.
+
 ### 2026-05-25 - Replace beep tones with procedural WAV cues
 
 - Changed: Replaced blocking-style Beep tone recipes with prebuilt in-memory
