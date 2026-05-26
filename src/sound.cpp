@@ -21,6 +21,7 @@ namespace
 {
 std::atomic_bool soundEnabled{true};
 std::atomic_int soundVolumePercent{100};
+constexpr int DefaultRestoredVolumePercent = 60;
 
 enum class SoundCue
 {
@@ -54,20 +55,30 @@ constexpr double Pi = 3.14159265358979323846;
 constexpr double TwoPi = Pi * 2.0;
 constexpr double MasterOutputGain = 0.38;
 constexpr int CueCount = static_cast<int>(SoundCue::Count);
+constexpr int OutputBufferSamples = 256;
+constexpr int OutputBufferCount = 3;
+constexpr std::size_t MaxActiveVoices = 24;
 
-struct ActivePlayback
+struct ActiveVoice
 {
-    HWAVEOUT output = nullptr;
-    WAVEHDR header = {};
-    std::vector<short> samples;
+    const std::vector<short> *samples = nullptr;
+    std::size_t position = 0;
+    bool important = false;
 };
 
 std::array<std::vector<short>, CueCount> soundCache;
 std::array<DWORD, CueCount> lastCuePlayTimes = {};
-std::mutex activeSoundLock;
-std::vector<HWAVEOUT> activeOutputs;
+std::array<std::vector<short>, OutputBufferCount> mixerBuffers;
+std::array<WAVEHDR, OutputBufferCount> mixerHeaders = {};
+std::array<bool, OutputBufferCount> mixerBufferQueued = {};
+std::mutex mixerLock;
+std::mutex outputLock;
+std::vector<ActiveVoice> activeVoices;
+HANDLE mixerEvent = nullptr;
+HANDLE mixerThread = nullptr;
+HWAVEOUT mixerOutput = nullptr;
+std::atomic_bool mixerShutdownRequested{false};
 bool soundCacheReady = false;
-int cachedSoundVolumePercent = -1;
 
 int CueIndex(SoundCue cue)
 {
@@ -155,23 +166,21 @@ std::vector<double> MakeMix(double durationMs)
     return std::vector<double>(std::max(1, FrameFromMs(durationMs)), 0.0);
 }
 
-std::vector<short> ConvertToPcm(const std::vector<double> &mix, int volumePercent)
+std::vector<short> ConvertToPcm(const std::vector<double> &mix)
 {
     std::vector<short> samples;
     samples.reserve(mix.size());
-    double normalizedVolume = static_cast<double>(ClampVolume(volumePercent)) / 100.0;
-    double volume = MasterOutputGain * std::pow(normalizedVolume, 1.45);
 
     for (double sample : mix)
     {
-        sample *= volume;
+        sample *= MasterOutputGain;
         sample = std::max(-1.0, std::min(1.0, sample));
         samples.push_back(static_cast<short>(std::round(sample * 30000.0)));
     }
     return samples;
 }
 
-std::vector<short> BuildCueSamples(SoundCue cue, int volumePercent)
+std::vector<short> BuildCueSamples(SoundCue cue)
 {
     std::vector<double> mix;
 
@@ -291,7 +300,7 @@ std::vector<short> BuildCueSamples(SoundCue cue, int volumePercent)
         break;
     }
 
-    return ConvertToPcm(mix, volumePercent);
+    return ConvertToPcm(mix);
 }
 
 WAVEFORMATEX MakeWaveFormat()
@@ -306,68 +315,57 @@ WAVEFORMATEX MakeWaveFormat()
     return format;
 }
 
-void ForgetActiveOutput(HWAVEOUT output)
+double GetRuntimeVolumeScale()
 {
-    std::lock_guard<std::mutex> lock(activeSoundLock);
-    activeOutputs.erase(std::remove(activeOutputs.begin(), activeOutputs.end(), output), activeOutputs.end());
+    double normalizedVolume = static_cast<double>(ClampVolume(soundVolumePercent.load())) / 100.0;
+    return std::pow(normalizedVolume, 1.45);
 }
 
-DWORD WINAPI CleanupPlaybackThread(LPVOID parameter)
+short ClampMixedSample(double sample)
 {
-    ActivePlayback *playback = static_cast<ActivePlayback *>(parameter);
-    while ((playback->header.dwFlags & WHDR_DONE) == 0)
-    {
-        Sleep(2);
-    }
-
-    waveOutUnprepareHeader(playback->output, &playback->header, sizeof(playback->header));
-    ForgetActiveOutput(playback->output);
-    waveOutClose(playback->output);
-    delete playback;
-    return 0;
+    sample = std::max(-32768.0, std::min(32767.0, sample));
+    return static_cast<short>(std::round(sample));
 }
 
-void StopSoundPlayback()
+bool MixOutputBuffer(std::vector<short> &buffer)
 {
-    std::vector<HWAVEOUT> outputs;
-    {
-        std::lock_guard<std::mutex> lock(activeSoundLock);
-        outputs = activeOutputs;
-    }
-
-    for (HWAVEOUT output : outputs)
-    {
-        waveOutReset(output);
-    }
-}
-
-void MarkSoundCacheDirty()
-{
-    soundCacheReady = false;
-    cachedSoundVolumePercent = -1;
-}
-
-bool EnsureSoundLibrary()
-{
-    int volumePercent = soundVolumePercent.load();
-    if (!soundEnabled.load() || volumePercent <= 0)
+    std::fill(buffer.begin(), buffer.end(), 0);
+    std::lock_guard<std::mutex> lock(mixerLock);
+    if (activeVoices.empty())
     {
         return false;
     }
-    if (soundCacheReady && cachedSoundVolumePercent == volumePercent)
+
+    bool mixedAnySamples = false;
+    double volumeScale = GetRuntimeVolumeScale();
+
+    for (std::size_t frame = 0; frame < buffer.size(); frame++)
     {
-        return true;
+        double mixedSample = 0.0;
+        for (ActiveVoice &voice : activeVoices)
+        {
+            if (voice.samples != nullptr && voice.position < voice.samples->size())
+            {
+                mixedSample += static_cast<double>((*voice.samples)[voice.position]) * volumeScale;
+                voice.position++;
+                mixedAnySamples = true;
+            }
+        }
+        buffer[frame] = ClampMixedSample(mixedSample);
     }
 
-    StopSoundPlayback();
-    for (int index = 0; index < CueCount; index++)
-    {
-        SoundCue cue = static_cast<SoundCue>(index);
-        soundCache[index] = BuildCueSamples(cue, volumePercent);
-    }
-    soundCacheReady = true;
-    cachedSoundVolumePercent = volumePercent;
-    return true;
+    activeVoices.erase(std::remove_if(activeVoices.begin(), activeVoices.end(),
+                                      [](const ActiveVoice &voice) {
+                                          return voice.samples == nullptr || voice.position >= voice.samples->size();
+                                      }),
+                       activeVoices.end());
+    return mixedAnySamples;
+}
+
+bool HasActiveVoices()
+{
+    std::lock_guard<std::mutex> lock(mixerLock);
+    return !activeVoices.empty();
 }
 
 int GetCueCooldownMs(SoundCue cue)
@@ -412,7 +410,213 @@ bool ShouldSkipCue(SoundCue cue, bool important)
     return false;
 }
 
-void PlayWaveOutCue(SoundCue cue)
+bool EnsureSoundLibrary()
+{
+    if (soundCacheReady)
+    {
+        return true;
+    }
+
+    for (int index = 0; index < CueCount; index++)
+    {
+        SoundCue cue = static_cast<SoundCue>(index);
+        soundCache[index] = BuildCueSamples(cue);
+    }
+    soundCacheReady = true;
+    return true;
+}
+
+bool WriteReadyMixerBuffers()
+{
+    std::lock_guard<std::mutex> outputGuard(outputLock);
+    if (mixerOutput == nullptr)
+    {
+        return false;
+    }
+
+    bool wroteAnyBuffer = false;
+    while (!mixerShutdownRequested.load() && HasActiveVoices())
+    {
+        int readyIndex = -1;
+        for (int index = 0; index < OutputBufferCount; index++)
+        {
+            if (!mixerBufferQueued[index] || (mixerHeaders[index].dwFlags & WHDR_DONE) != 0)
+            {
+                readyIndex = index;
+                break;
+            }
+        }
+
+        if (readyIndex < 0)
+        {
+            break;
+        }
+
+        if (!MixOutputBuffer(mixerBuffers[readyIndex]))
+        {
+            break;
+        }
+
+        MMRESULT result = waveOutWrite(mixerOutput, &mixerHeaders[readyIndex], sizeof(mixerHeaders[readyIndex]));
+        if (result != MMSYSERR_NOERROR)
+        {
+            mixerBufferQueued[readyIndex] = false;
+            break;
+        }
+        mixerBufferQueued[readyIndex] = true;
+        wroteAnyBuffer = true;
+    }
+    return wroteAnyBuffer;
+}
+
+DWORD WINAPI MixerThreadMain(LPVOID)
+{
+    while (true)
+    {
+        WaitForSingleObject(mixerEvent, INFINITE);
+        if (mixerShutdownRequested.load())
+        {
+            return 0;
+        }
+
+        WriteReadyMixerBuffers();
+    }
+}
+
+bool EnsureMixer()
+{
+    if (!soundEnabled.load() || soundVolumePercent.load() <= 0)
+    {
+        return false;
+    }
+    if (!EnsureSoundLibrary())
+    {
+        return false;
+    }
+    if (mixerOutput != nullptr && mixerThread != nullptr && mixerEvent != nullptr)
+    {
+        return true;
+    }
+
+    mixerEvent = CreateEventA(nullptr, FALSE, FALSE, nullptr);
+    if (mixerEvent == nullptr)
+    {
+        return false;
+    }
+
+    WAVEFORMATEX format = MakeWaveFormat();
+    MMRESULT result = waveOutOpen(&mixerOutput, WAVE_MAPPER, &format,
+                                  reinterpret_cast<DWORD_PTR>(mixerEvent), 0, CALLBACK_EVENT);
+    if (result != MMSYSERR_NOERROR)
+    {
+        CloseHandle(mixerEvent);
+        mixerEvent = nullptr;
+        mixerOutput = nullptr;
+        return false;
+    }
+
+    for (int index = 0; index < OutputBufferCount; index++)
+    {
+        mixerBuffers[index].assign(OutputBufferSamples, 0);
+        mixerHeaders[index] = {};
+        mixerHeaders[index].lpData = reinterpret_cast<LPSTR>(mixerBuffers[index].data());
+        mixerHeaders[index].dwBufferLength = static_cast<DWORD>(mixerBuffers[index].size() * sizeof(short));
+
+        result = waveOutPrepareHeader(mixerOutput, &mixerHeaders[index], sizeof(mixerHeaders[index]));
+        if (result != MMSYSERR_NOERROR)
+        {
+            for (int preparedIndex = 0; preparedIndex < index; preparedIndex++)
+            {
+                waveOutUnprepareHeader(mixerOutput, &mixerHeaders[preparedIndex], sizeof(mixerHeaders[preparedIndex]));
+            }
+            waveOutClose(mixerOutput);
+            CloseHandle(mixerEvent);
+            mixerOutput = nullptr;
+            mixerEvent = nullptr;
+            return false;
+        }
+        mixerBufferQueued[index] = false;
+    }
+
+    mixerShutdownRequested.store(false);
+    mixerThread = CreateThread(nullptr, 0, MixerThreadMain, nullptr, 0, nullptr);
+    if (mixerThread == nullptr)
+    {
+        std::lock_guard<std::mutex> outputGuard(outputLock);
+        waveOutReset(mixerOutput);
+        for (int index = 0; index < OutputBufferCount; index++)
+        {
+            waveOutUnprepareHeader(mixerOutput, &mixerHeaders[index], sizeof(mixerHeaders[index]));
+        }
+        waveOutClose(mixerOutput);
+        CloseHandle(mixerEvent);
+        mixerOutput = nullptr;
+        mixerEvent = nullptr;
+        return false;
+    }
+    return true;
+}
+
+void StopSoundPlayback()
+{
+    std::lock_guard<std::mutex> outputGuard(outputLock);
+    {
+        std::lock_guard<std::mutex> lock(mixerLock);
+        activeVoices.clear();
+    }
+
+    if (mixerOutput != nullptr)
+    {
+        waveOutReset(mixerOutput);
+        mixerBufferQueued.fill(false);
+    }
+}
+
+void MarkSoundCacheDirty()
+{
+    soundCacheReady = false;
+}
+
+void ShutdownMixer()
+{
+    StopSoundPlayback();
+
+    mixerShutdownRequested.store(true);
+    if (mixerEvent != nullptr)
+    {
+        SetEvent(mixerEvent);
+    }
+
+    if (mixerThread != nullptr)
+    {
+        WaitForSingleObject(mixerThread, INFINITE);
+        CloseHandle(mixerThread);
+        mixerThread = nullptr;
+    }
+
+    if (mixerOutput != nullptr)
+    {
+        waveOutReset(mixerOutput);
+        for (int index = 0; index < OutputBufferCount; index++)
+        {
+            waveOutUnprepareHeader(mixerOutput, &mixerHeaders[index], sizeof(mixerHeaders[index]));
+            mixerHeaders[index] = {};
+            mixerBufferQueued[index] = false;
+            mixerBuffers[index].clear();
+        }
+        waveOutClose(mixerOutput);
+        mixerOutput = nullptr;
+    }
+
+    if (mixerEvent != nullptr)
+    {
+        CloseHandle(mixerEvent);
+        mixerEvent = nullptr;
+    }
+    mixerShutdownRequested.store(false);
+}
+
+void QueueCueForMixer(SoundCue cue, bool important)
 {
     const std::vector<short> &samples = soundCache[CueIndex(cue)];
     if (samples.empty())
@@ -420,55 +624,27 @@ void PlayWaveOutCue(SoundCue cue)
         return;
     }
 
-    ActivePlayback *playback = new ActivePlayback;
-    playback->samples = samples;
-    WAVEFORMATEX format = MakeWaveFormat();
-
-    MMRESULT result = waveOutOpen(&playback->output, WAVE_MAPPER, &format, 0, 0, CALLBACK_NULL);
-    if (result != MMSYSERR_NOERROR)
     {
-        delete playback;
-        return;
+        std::lock_guard<std::mutex> lock(mixerLock);
+        if (activeVoices.size() >= MaxActiveVoices)
+        {
+            auto removable = std::find_if(activeVoices.begin(), activeVoices.end(),
+                                          [](const ActiveVoice &voice) {
+                                              return !voice.important;
+                                          });
+            if (removable != activeVoices.end())
+            {
+                activeVoices.erase(removable);
+            }
+            else
+            {
+                activeVoices.erase(activeVoices.begin());
+            }
+        }
+        activeVoices.push_back(ActiveVoice{&samples, 0, important});
     }
 
-    playback->header.lpData = reinterpret_cast<LPSTR>(playback->samples.data());
-    playback->header.dwBufferLength = static_cast<DWORD>(playback->samples.size() * sizeof(short));
-
-    result = waveOutPrepareHeader(playback->output, &playback->header, sizeof(playback->header));
-    if (result != MMSYSERR_NOERROR)
-    {
-        waveOutClose(playback->output);
-        delete playback;
-        return;
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(activeSoundLock);
-        activeOutputs.push_back(playback->output);
-    }
-
-    result = waveOutWrite(playback->output, &playback->header, sizeof(playback->header));
-    if (result != MMSYSERR_NOERROR)
-    {
-        waveOutUnprepareHeader(playback->output, &playback->header, sizeof(playback->header));
-        ForgetActiveOutput(playback->output);
-        waveOutClose(playback->output);
-        delete playback;
-        return;
-    }
-
-    HANDLE cleanupThread = CreateThread(nullptr, 0, CleanupPlaybackThread, playback, 0, nullptr);
-    if (cleanupThread != nullptr)
-    {
-        CloseHandle(cleanupThread);
-        return;
-    }
-
-    waveOutReset(playback->output);
-    waveOutUnprepareHeader(playback->output, &playback->header, sizeof(playback->header));
-    ForgetActiveOutput(playback->output);
-    waveOutClose(playback->output);
-    delete playback;
+    SetEvent(mixerEvent);
 }
 #else
 void StopSoundPlayback()
@@ -476,6 +652,10 @@ void StopSoundPlayback()
 }
 
 void MarkSoundCacheDirty()
+{
+}
+
+void ShutdownMixer()
 {
 }
 #endif
@@ -488,7 +668,7 @@ void PlayCue(SoundCue cue, bool important)
     }
 
 #ifdef _WIN32
-    if (!EnsureSoundLibrary())
+    if (!EnsureMixer())
     {
         return;
     }
@@ -496,7 +676,7 @@ void PlayCue(SoundCue cue, bool important)
     {
         return;
     }
-    PlayWaveOutCue(cue);
+    QueueCueForMixer(cue, important);
 #else
     (void)cue;
     (void)important;
@@ -556,7 +736,7 @@ void SetSoundEnabled(bool enabled)
     }
     if (soundVolumePercent.load() == 0)
     {
-        soundVolumePercent.store(100);
+        soundVolumePercent.store(DefaultRestoredVolumePercent);
         MarkSoundCacheDirty();
     }
 }
@@ -572,7 +752,6 @@ void SetSoundVolumePercent(int volumePercent)
     if (soundVolumePercent.load() != clampedVolumePercent)
     {
         StopSoundPlayback();
-        MarkSoundCacheDirty();
     }
     soundVolumePercent.store(clampedVolumePercent);
     soundEnabled.store(clampedVolumePercent > 0);
@@ -645,5 +824,5 @@ void PlayGameOverSound()
 
 void ShutdownSound()
 {
-    StopSoundPlayback();
+    ShutdownMixer();
 }

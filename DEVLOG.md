@@ -26,6 +26,24 @@ specific edits.
 
 ## Entries
 
+### 2026-05-26 - Stabilize audio with a persistent mixer
+
+- Changed: Replaced per-cue `waveOut` handles with one persistent WinMM
+  `waveOut` stream that mixes active cues into small PCM buffers, applies
+  runtime volume in the mixer, and fully closes the mixer on shutdown.
+- Why: Windows still produced missing or uneven cue volume when each short
+  effect opened its own playback path, so the game needed one stable output
+  stream under its own mixing control.
+- Risk: Buffer size and cooldown values still need real Windows listening to
+  confirm latency and sound density feel right.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc
+  tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp
+  src/high_score.cpp src/leaderboard.cpp src/position.cpp src/settings.cpp
+  src/settings_options.cpp src/sound.cpp -o /private/tmp/tetris_core_tests`
+  and ran `/private/tmp/tetris_core_tests`; all core tests passed.
+- Follow-ups: If Windows still feels inconsistent, tune buffer size and move
+  toward WASAPI for lower latency.
+
 ### 2026-05-26 - Mix overlapping short sound cues
 
 - Changed: Replaced single-channel `PlaySound` playback with per-cue WinMM
