@@ -308,6 +308,24 @@ void TestLockDelayAllowsGroundAdjustment()
     Expect(game.GetCurrentBlockId() == 3, "finishing lock delay spawns the next block");
 }
 
+void TestLockDelayCancelsWhenBlockMovesOffLedge()
+{
+    Grid grid;
+    grid.grid[19][6] = 7;
+    IBlock block;
+    block.Move(18, 0);
+    Game game{block, OBlock(), grid};
+
+    game.Start();
+    game.MoveBlockDown();
+
+    Expect(game.IsLockDelayActive(), "ledge support starts lock delay");
+
+    game.HandleInput('a');
+
+    Expect(!game.IsLockDelayActive(), "moving off a ledge cancels lock delay so the block can fall");
+}
+
 void TestPauseStopsLockDelay()
 {
     OBlock block;
@@ -929,6 +947,7 @@ int main()
     TestSoftDropScoresOnePoint();
     TestBlockedSoftDropDoesNotScore();
     TestLockDelayAllowsGroundAdjustment();
+    TestLockDelayCancelsWhenBlockMovesOffLedge();
     TestPauseStopsLockDelay();
     TestHighScoreSurvivesRestart();
     TestHighScoreFilePersistence();

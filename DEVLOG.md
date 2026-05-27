@@ -26,6 +26,26 @@ specific edits.
 
 ## Entries
 
+### 2026-05-27 - Lighten audio and resume drop after lock-delay cancel
+
+- Changed: Removed the low-frequency thump layers from hard drop and special
+  clear cues, lowered the master output gain, shifted clear notes brighter,
+  and restarted the drop timer when lock delay is canceled by a successful
+  grounded adjustment.
+- Why: Windows testing showed the persistent mixer made the sound palette too
+  bass-heavy, and moving a grounded piece back into a falling position could
+  cancel lock delay without restoring automatic drop.
+- Risk: Audio taste still needs Windows listening, and the timer fix touches
+  the edge case where a piece escapes lock delay through movement or rotation.
+- Verified: Added a core test for lock delay canceling when a supported block
+  moves off a ledge. Built with `c++ -std=c++17 -Wall -Wextra -Isrc
+  tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp
+  src/high_score.cpp src/leaderboard.cpp src/position.cpp src/settings.cpp
+  src/settings_options.cpp src/sound.cpp -o /private/tmp/tetris_core_tests`
+  and ran `/private/tmp/tetris_core_tests`; all core tests passed.
+- Follow-ups: If audio is still too heavy, add an explicit BRIGHT/SOFT sound
+  preset instead of only one palette.
+
 ### 2026-05-26 - Stabilize audio with a persistent mixer
 
 - Changed: Replaced per-cue `waveOut` handles with one persistent WinMM

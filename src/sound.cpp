@@ -53,7 +53,7 @@ int ClampVolume(int value)
 constexpr int SampleRate = 44100;
 constexpr double Pi = 3.14159265358979323846;
 constexpr double TwoPi = Pi * 2.0;
-constexpr double MasterOutputGain = 0.38;
+constexpr double MasterOutputGain = 0.30;
 constexpr int CueCount = static_cast<int>(SoundCue::Count);
 constexpr int OutputBufferSamples = 256;
 constexpr int OutputBufferCount = 3;
@@ -197,11 +197,10 @@ std::vector<short> BuildCueSamples(SoundCue cue)
         AddTone(mix, 0.0, 18.0, 980.0, 760.0, 0.12, 0.35, 8.0);
         break;
     case SoundCue::HardDrop:
-        mix = MakeMix(72.0);
-        AddNoise(mix, 0.0, 13.0, 0.20, 4.5, 23u);
-        AddTone(mix, 0.0, 34.0, 185.0, 118.0, 0.13, 0.5, 22.0);
-        AddTone(mix, 0.0, 30.0, 1350.0, 2200.0, 0.20, 0.25, 11.0);
-        AddTone(mix, 14.0, 32.0, 520.0, 390.0, 0.07, 0.5, 18.0);
+        mix = MakeMix(54.0);
+        AddNoise(mix, 0.0, 8.0, 0.10, 3.0, 23u);
+        AddTone(mix, 0.0, 26.0, 1350.0, 2400.0, 0.16, 0.25, 9.0);
+        AddTone(mix, 10.0, 24.0, 760.0, 980.0, 0.06, 0.4, 12.0);
         break;
     case SoundCue::Hold:
         mix = MakeMix(62.0);
@@ -216,62 +215,59 @@ std::vector<short> BuildCueSamples(SoundCue cue)
         break;
     case SoundCue::ClearSingle:
         mix = MakeMix(115.0);
-        AddNoise(mix, 0.0, 20.0, 0.09, 7.0, 37u);
-        AddNote(mix, 0.0, 62.0, 660.0, 0.14);
-        AddNote(mix, 38.0, 62.0, 990.0, 0.12);
+        AddNoise(mix, 0.0, 16.0, 0.06, 6.0, 37u);
+        AddNote(mix, 0.0, 62.0, 760.0, 0.12);
+        AddNote(mix, 38.0, 62.0, 1140.0, 0.10);
         break;
     case SoundCue::ClearDouble:
         mix = MakeMix(145.0);
-        AddNoise(mix, 0.0, 24.0, 0.11, 8.0, 41u);
-        AddNote(mix, 0.0, 64.0, 620.0, 0.13);
-        AddNote(mix, 36.0, 70.0, 784.0, 0.13);
-        AddNote(mix, 78.0, 58.0, 1046.0, 0.12);
+        AddNoise(mix, 0.0, 20.0, 0.07, 7.0, 41u);
+        AddNote(mix, 0.0, 64.0, 700.0, 0.11);
+        AddNote(mix, 36.0, 70.0, 880.0, 0.11);
+        AddNote(mix, 78.0, 58.0, 1175.0, 0.10);
         break;
     case SoundCue::ClearTriple:
         mix = MakeMix(178.0);
-        AddNoise(mix, 0.0, 30.0, 0.12, 9.0, 43u);
-        AddNote(mix, 0.0, 68.0, 620.0, 0.13);
-        AddNote(mix, 36.0, 72.0, 784.0, 0.13);
-        AddNote(mix, 76.0, 72.0, 988.0, 0.12);
-        AddNote(mix, 116.0, 54.0, 1175.0, 0.11);
+        AddNoise(mix, 0.0, 24.0, 0.08, 8.0, 43u);
+        AddNote(mix, 0.0, 68.0, 700.0, 0.11);
+        AddNote(mix, 36.0, 72.0, 880.0, 0.11);
+        AddNote(mix, 76.0, 72.0, 1175.0, 0.10);
+        AddNote(mix, 116.0, 54.0, 1480.0, 0.09);
         break;
     case SoundCue::ClearTetris:
         mix = MakeMix(255.0);
-        AddNoise(mix, 0.0, 16.0, 0.18, 4.0, 47u);
-        AddNoise(mix, 24.0, 150.0, 0.055, 38.0, 53u);
-        AddTone(mix, 0.0, 46.0, 155.0, 92.0, 0.12, 0.4, 30.0);
-        AddNote(mix, 0.0, 72.0, 523.0, 0.13);
-        AddNote(mix, 42.0, 76.0, 659.0, 0.14);
-        AddNote(mix, 84.0, 80.0, 784.0, 0.14);
-        AddNote(mix, 126.0, 88.0, 1046.0, 0.15);
-        AddNote(mix, 178.0, 60.0, 1318.0, 0.12);
+        AddNoise(mix, 0.0, 14.0, 0.11, 4.0, 47u);
+        AddNoise(mix, 24.0, 135.0, 0.035, 34.0, 53u);
+        AddNote(mix, 0.0, 72.0, 659.0, 0.11);
+        AddNote(mix, 42.0, 76.0, 831.0, 0.12);
+        AddNote(mix, 84.0, 80.0, 1046.0, 0.12);
+        AddNote(mix, 126.0, 88.0, 1318.0, 0.13);
+        AddNote(mix, 178.0, 60.0, 1760.0, 0.10);
         break;
     case SoundCue::SpinClear:
         mix = MakeMix(200.0);
-        AddNoise(mix, 0.0, 24.0, 0.13, 7.0, 59u);
-        AddTone(mix, 0.0, 125.0, 780.0, 1568.0, 0.15, 0.6, 52.0);
-        AddTone(mix, 22.0, 110.0, 1175.0, 1760.0, 0.10, 0.8, 40.0);
-        AddNote(mix, 112.0, 70.0, 1480.0, 0.11);
+        AddNoise(mix, 0.0, 18.0, 0.08, 6.0, 59u);
+        AddTone(mix, 0.0, 115.0, 980.0, 1760.0, 0.12, 0.6, 48.0);
+        AddTone(mix, 22.0, 98.0, 1320.0, 1975.0, 0.08, 0.8, 36.0);
+        AddNote(mix, 112.0, 70.0, 1760.0, 0.09);
         break;
     case SoundCue::BackToBack:
         mix = MakeMix(205.0);
-        AddNoise(mix, 0.0, 14.0, 0.16, 4.0, 61u);
-        AddTone(mix, 0.0, 38.0, 190.0, 130.0, 0.10, 0.4, 24.0);
-        AddNote(mix, 0.0, 72.0, 988.0, 0.13);
-        AddNote(mix, 48.0, 76.0, 1175.0, 0.14);
-        AddNote(mix, 98.0, 84.0, 1568.0, 0.14);
+        AddNoise(mix, 0.0, 12.0, 0.10, 4.0, 61u);
+        AddNote(mix, 0.0, 72.0, 1046.0, 0.11);
+        AddNote(mix, 48.0, 76.0, 1318.0, 0.12);
+        AddNote(mix, 98.0, 84.0, 1760.0, 0.12);
         break;
     case SoundCue::PerfectClear:
         mix = MakeMix(330.0);
-        AddNoise(mix, 0.0, 18.0, 0.17, 5.0, 67u);
-        AddNoise(mix, 36.0, 210.0, 0.055, 55.0, 71u);
-        AddTone(mix, 0.0, 42.0, 175.0, 120.0, 0.10, 0.4, 26.0);
-        AddNote(mix, 0.0, 78.0, 784.0, 0.13);
-        AddNote(mix, 44.0, 82.0, 988.0, 0.13);
-        AddNote(mix, 88.0, 86.0, 1175.0, 0.13);
-        AddNote(mix, 132.0, 92.0, 1568.0, 0.14);
-        AddNote(mix, 188.0, 90.0, 1975.0, 0.11);
-        AddNote(mix, 236.0, 74.0, 2349.0, 0.09);
+        AddNoise(mix, 0.0, 16.0, 0.11, 5.0, 67u);
+        AddNoise(mix, 36.0, 200.0, 0.035, 50.0, 71u);
+        AddNote(mix, 0.0, 78.0, 880.0, 0.11);
+        AddNote(mix, 44.0, 82.0, 1108.0, 0.11);
+        AddNote(mix, 88.0, 86.0, 1318.0, 0.11);
+        AddNote(mix, 132.0, 92.0, 1760.0, 0.12);
+        AddNote(mix, 188.0, 90.0, 2217.0, 0.09);
+        AddNote(mix, 236.0, 74.0, 2637.0, 0.07);
         break;
     case SoundCue::LevelUp:
         mix = MakeMix(250.0);

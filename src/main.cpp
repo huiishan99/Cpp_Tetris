@@ -1157,8 +1157,14 @@ void UpdateLockDelay(HWND hwnd)
 {
     if (!game.IsLockDelayActive())
     {
+        bool wasLockDelayTimerRunning = lockDelayTimerRunning;
         KillTimer(hwnd, AppConfig::LockDelayTimerId);
         lockDelayTimerRunning = false;
+        if (wasLockDelayTimerRunning && game.IsStarted() && !game.IsGameOver() &&
+            !game.IsPaused() && !settingsOpen && !game.IsLineClearPending())
+        {
+            SetTimer(hwnd, AppConfig::DropTimerId, game.GetDropIntervalMs(), nullptr);
+        }
         return;
     }
 
