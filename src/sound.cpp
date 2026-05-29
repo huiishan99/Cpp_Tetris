@@ -54,6 +54,7 @@ constexpr int SampleRate = 44100;
 constexpr double Pi = 3.14159265358979323846;
 constexpr double TwoPi = Pi * 2.0;
 constexpr double MasterOutputGain = 0.30;
+constexpr double SoftLimiterCeiling = 32767.0;
 constexpr int CueCount = static_cast<int>(SoundCue::Count);
 constexpr int OutputBufferSamples = 256;
 constexpr int OutputBufferCount = 3;
@@ -317,8 +318,18 @@ double GetRuntimeVolumeScale()
     return std::pow(normalizedVolume, 1.45);
 }
 
-short ClampMixedSample(double sample)
+double GetOverlapDucking(int contributingVoices)
 {
+    if (contributingVoices <= 1)
+    {
+        return 1.0;
+    }
+    return 1.0 / std::sqrt(static_cast<double>(contributingVoices));
+}
+
+short LimitMixedSample(double sample)
+{
+    sample = std::tanh(sample / SoftLimiterCeiling) * SoftLimiterCeiling;
     sample = std::max(-32768.0, std::min(32767.0, sample));
     return static_cast<short>(std::round(sample));
 }
@@ -338,16 +349,19 @@ bool MixOutputBuffer(std::vector<short> &buffer)
     for (std::size_t frame = 0; frame < buffer.size(); frame++)
     {
         double mixedSample = 0.0;
+        int contributingVoices = 0;
         for (ActiveVoice &voice : activeVoices)
         {
             if (voice.samples != nullptr && voice.position < voice.samples->size())
             {
                 mixedSample += static_cast<double>((*voice.samples)[voice.position]) * volumeScale;
                 voice.position++;
+                contributingVoices++;
                 mixedAnySamples = true;
             }
         }
-        buffer[frame] = ClampMixedSample(mixedSample);
+        mixedSample *= GetOverlapDucking(contributingVoices);
+        buffer[frame] = LimitMixedSample(mixedSample);
     }
 
     activeVoices.erase(std::remove_if(activeVoices.begin(), activeVoices.end(),

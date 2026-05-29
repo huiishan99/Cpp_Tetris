@@ -26,6 +26,24 @@ specific edits.
 
 ## Entries
 
+### 2026-05-30 - Add mixer soft limiting
+
+- Changed: Added overlap ducking and a soft limiter to the Windows WinMM mixer;
+  confirmed the output stream is still mono.
+- Why: Windows testing still had occasional heavy accents. The likely cause was
+  overlapping cues summing into hard clipping, not stereo channel behavior.
+- Risk: Dense cue stacks may sound a little softer than before and still need
+  Windows listening to tune by taste.
+- Verified: Built with `c++ -std=c++17 -Wall -Wextra -Isrc
+  tests/core_tests.cpp src/block.cpp src/blocks.cpp src/game.cpp src/grid.cpp
+  src/high_score.cpp src/leaderboard.cpp src/position.cpp src/settings.cpp
+  src/settings_options.cpp src/sound.cpp -o /private/tmp/tetris_core_tests`
+  and ran `/private/tmp/tetris_core_tests`; all core tests passed. Could not
+  compile the Windows-specific WinMM path locally because
+  `x86_64-w64-mingw32-g++` is not installed in this environment.
+- Follow-ups: If heavy accents remain on Windows, expose a SOFT/BRIGHT audio
+  preset or tune per-cue gains further.
+
 ### 2026-05-27 - Lighten audio and resume drop after lock-delay cancel
 
 - Changed: Removed the low-frequency thump layers from hard drop and special
